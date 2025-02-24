@@ -1,4 +1,3 @@
-
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
 
 class BalanceService {
@@ -8,11 +7,16 @@ class BalanceService {
     String accessToken,
     int transferAmount,
   ) async {
-    await _httpService.postRequest(
-      '/api/v1/user/transfer',
-      {'transfer_amount': transferAmount},
-      headers: {'Authorization': accessToken}, // 需要用户的认证令牌
-    );
-    return true;
+    try {
+      await _httpService.postRequest(
+        '/api/v1/user/transfer',
+        {'transfer_amount': transferAmount},
+        headers: {'Authorization': accessToken}, // 需要用户的认证令牌
+      );
+      return true;
+    } catch (e) {
+      // 统一错误提示
+      throw '佣金划转失败，请重试！（如有疑问请访问官网发起工单联系客服）';
+    }
   }
 }
