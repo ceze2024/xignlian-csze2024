@@ -1,6 +1,6 @@
 {
     "general": {
-        "appTitle": "寻乐云",
+        "appTitle": "星链",
         "reset": "Reset",
         "toggle": {
             "enabled": "Enabled",
@@ -163,7 +163,7 @@
         "confirmButton": "Logout"
     },
     "login": {
-        "welcome": "Welcome to Xunlecloud",
+        "welcome": "Welcome to startlink",
         "username": "Username",
         "password": "Password",
         "loginButton": "Login",

@@ -45,9 +45,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               padding: const EdgeInsets.all(16.0),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth > 600
-                      ? 500
-                      : constraints.maxWidth * 0.9,
+                  maxWidth: constraints.maxWidth > 600 ? 500 : constraints.maxWidth * 0.9,
                 ),
                 child: Form(
                   child: Column(
@@ -128,10 +126,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ElevatedButton(
                           onPressed: domainCheckViewModel.isSuccess
                               ? () async {
-                                  final email =
-                                      loginViewModel.usernameController.text;
-                                  final password =
-                                      loginViewModel.passwordController.text;
+                                  final email = loginViewModel.usernameController.text;
+                                  final password = loginViewModel.passwordController.text;
                                   try {
                                     await loginViewModel.login(
                                       email,
@@ -198,6 +194,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              await AuthService.openOfficialWebsite();
+                            } catch (e) {
+                              _showErrorSnackbar(
+                                context,
+                                e.toString(),
+                                Colors.red,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            '打开官网',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

@@ -9,6 +9,7 @@ import 'package:hiddify/features/panel/xboard/viewmodels/purchase_viewmodel.dart
 
 import 'package:hiddify/features/panel/xboard/views/components/dialog/purchase_details_dialog.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
 
 final purchaseViewModelProvider = ChangeNotifierProvider(
   (ref) => PurchaseViewModel(purchaseService: PurchaseService()),
@@ -89,7 +90,7 @@ class _PurchasePageState extends ConsumerState<PurchasePage> {
     );
   }
 
-Widget _buildPlanCard(
+  Widget _buildPlanCard(
     Plan plan,
     Translations t,
     BuildContext context,
@@ -125,11 +126,20 @@ Widget _buildPlanCard(
                   priceLabel: t.purchase.priceLabel,
                   currency: t.purchase.rmb,
                   style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold,),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    showPurchaseDialog(context, plan, t, ref);
+                  onPressed: () async {
+                    try {
+                      await AuthService.openSubscriptionPage();
+                    } catch (e) {
+                      // 显示错误提示
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,

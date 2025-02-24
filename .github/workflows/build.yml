@@ -19,14 +19,14 @@ env:
   FLUTTER_VERSION: '3.24.0'
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   TAG_NAME: "${{ inputs.tag-name }}"
-  TARGET_NAME_apk: "寻乐云-Android"
-  TARGET_NAME_exe: "寻乐云-Windows-x64"
-  TARGET_NAME_dmg: "寻乐云-MacOS"
-  TARGET_NAME_pkg: "寻乐云-MacOS-Installer"
-  TARGET_NAME_ipa: "寻乐云-iOS"
-  TARGET_NAME_AppImage: "寻乐云-Linux-x64"
-  TARGET_NAME_deb: "寻乐云-Debian-x64"
-  TARGET_NAME_rpm: "寻乐云-rpm-x64"
+  TARGET_NAME_apk: "星链-Android"
+  TARGET_NAME_exe: "星链-Windows-x64"
+  TARGET_NAME_dmg: "星链-MacOS"
+  TARGET_NAME_pkg: "星链-MacOS-Installer"
+  TARGET_NAME_ipa: "星链-iOS"
+  TARGET_NAME_AppImage: "星链-Linux-x64"
+  TARGET_NAME_deb: "星链-Debian-x64"
+  TARGET_NAME_rpm: "星链-rpm-x64"
 
 jobs:
   build_linux:
