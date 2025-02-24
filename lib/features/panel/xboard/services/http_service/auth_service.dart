@@ -6,7 +6,6 @@ import 'package:hiddify/features/panel/xboard/services/http_service/domain_servi
 
 class AuthService {
   final HttpService _httpService = HttpService();
-  static const String officialWebsite = 'https://345.gs';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -63,10 +62,13 @@ class AuthService {
     );
   }
 
-  // 新增: 打开官网的方法
+  // 修改: 打开官网的方法
   static Future<void> openOfficialWebsite() async {
     try {
-      final Uri url = Uri.parse(officialWebsite);
+      // 获取当前可用域名
+      String baseUrl = await DomainService.fetchValidDomain();
+
+      final Uri url = Uri.parse(baseUrl);
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         throw Exception('无法打开官网链接');
       }
