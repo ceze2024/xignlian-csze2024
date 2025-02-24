@@ -58,7 +58,7 @@ class ActiveProxyDelayIndicator extends HookConsumerWidget {
                                 )
                               else ...[
                                 TextSpan(
-                                  text: delay.toString(),
+                                  text: (delay ~/ 2).toString(),
                                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 const TextSpan(text: " ms"),

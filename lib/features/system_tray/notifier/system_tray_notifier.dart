@@ -46,7 +46,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with AppLogger {
       setIcon(const Connected());
       tooltip = "$tooltip - ${connection.present(t)}";
       if (newConnectionStatus) {
-        tooltip = "$tooltip : ${delay}ms";
+        tooltip = "$tooltip : ${delay ~/ 2}ms";
       } else {
         tooltip = "$tooltip : -";
       }
@@ -57,7 +57,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with AppLogger {
       tooltip = "$tooltip - ${connection.present(t)}";
     }
     if (Platform.isMacOS) {
-      windowManager.setBadgeLabel("${delay}ms");
+      windowManager.setBadgeLabel("${delay ~/ 2}ms");
     }
     if (!Platform.isLinux) await trayManager.setToolTip(tooltip);
 
