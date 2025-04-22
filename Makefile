@@ -163,7 +163,7 @@ android-aab-release:
 
 windows-release:
 	dart pub global activate flutter_distributor
-	flutter_distributor package --flutter-build-args=verbose --platform windows --targets exe,msix $(DISTRIBUTOR_ARGS)
+	flutter_distributor package --flutter-build-args=verbose --platform windows --targets exe,msi $(DISTRIBUTOR_ARGS)
 
 linux-release: 
 	flutter_distributor package --flutter-build-args=verbose --platform linux --targets deb,rpm,appimage $(DISTRIBUTOR_ARGS)

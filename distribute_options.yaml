@@ -7,6 +7,14 @@ releases:
           platform: windows
           target: exe
 
+      - name: release-windows-setup
+        package:
+          platform: windows
+          target: msi
+          build_args:
+            target-platform: windows-x64
+            build-name: startlink-Windows-Setup-x64
+
       - name: release-android-apk
         package:
           platform: android
