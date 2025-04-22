@@ -71,7 +71,7 @@ class ForgetPasswordPage extends ConsumerWidget {
                   suffixIcon: viewModel.isCountingDown
                       ? Text('${viewModel.countdownTime} s')
                       : TextButton(
-                          onPressed: viewModel.isCountingDown ? null : viewModel.sendVerificationCode,
+                          onPressed: viewModel.isCountingDown ? null : () => viewModel.sendVerificationCode(context),
                           child: Text(t.forgetPassword.sendCode),
                         ),
                 ),
