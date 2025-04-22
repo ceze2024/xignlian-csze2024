@@ -149,6 +149,7 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
+          mkdir -p dist
           make windows-release
   
       - name: Copy to out Windows
