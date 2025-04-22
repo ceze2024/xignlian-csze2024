@@ -20,13 +20,13 @@ env:
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   TAG_NAME: "${{ inputs.tag-name }}"
   TARGET_NAME_apk: "星链-Android"
-  TARGET_NAME_exe: "星链-Windows-x64"
+  TARGET_NAME_exe: "starlinkvpn-Windows-x64"
   TARGET_NAME_dmg: "星链-MacOS"
   TARGET_NAME_pkg: "星链-MacOS-Installer"
   TARGET_NAME_ipa: "星链-iOS"
-  TARGET_NAME_AppImage: "星链-Linux-x64"
-  TARGET_NAME_deb: "星链-Debian-x64"
-  TARGET_NAME_rpm: "星链-rpm-x64"
+  TARGET_NAME_AppImage: "starlinkvpn-Linux-x64"
+  TARGET_NAME_deb: "starlinkvpn-Debian-x64"
+  TARGET_NAME_rpm: "starlinkvpn-rpm-x64"
 
 jobs:
   build_linux:
@@ -149,6 +149,7 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
+          mkdir -p dist
           make windows-release
   
       - name: Copy to out Windows
