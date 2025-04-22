@@ -5,14 +5,7 @@ releases:
       - name: release-windows-exe
         package:
           platform: windows
-          target: exe
-          build_args:
-            target: lib/main.dart
-          dart_define:
-            sentry_dsn: ""
-          inno_setup:
-            script_template: windows/inno_setup.iss
-            version: ${version}
+          target: exe,msix
 
       - name: release-android-apk
         package:
