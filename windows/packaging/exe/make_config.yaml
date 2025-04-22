@@ -2,14 +2,16 @@ app_id: 6L903538-42B1-4596-G479-BJ779F21A65D
 publisher: 星链
 publisher_url: https://github.com/hiddify/hiddify-next
 display_name: 星链
-executable_name: Hiddify.exe
-output_base_file_name: hiddify-windows-setup_exe
+executable_name: 星链.exe
+output_base_file_name: 星链.exe
 create_desktop_icon: true
 install_dir_name: "{autopf64}\\starlink"
 setup_icon_file: ..\..\windows\runner\resources\app_icon.ico
 locales:
+  - ar
   - en
-  - zh
+  - fa
   - ru
+  - pt
   - tr
 script_template: inno_setup.sas
