@@ -5,7 +5,7 @@ releases:
       - name: release-windows-exe
         package:
           platform: windows
-          target: exe,msix
+          target: exe
 
       - name: release-android-apk
         package:
