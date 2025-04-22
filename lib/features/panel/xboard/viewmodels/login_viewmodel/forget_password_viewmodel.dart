@@ -23,10 +23,9 @@ class ForgetPasswordViewModel extends ChangeNotifier {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController emailCodeController = TextEditingController();
 
-  ForgetPasswordViewModel({required AuthService authService})
-      : _authService = authService;
+  ForgetPasswordViewModel({required AuthService authService}) : _authService = authService;
 
-  Future<void> sendVerificationCode() async {
+  Future<void> sendVerificationCode(BuildContext context) async {
     final email = emailController.text.trim();
     _isCountingDown = true;
     _countdownTime = 60;
@@ -34,30 +33,30 @@ class ForgetPasswordViewModel extends ChangeNotifier {
 
     try {
       await _authService.sendVerificationCode(email);
-
-      // 只有发送成功后才开始倒计时
-      while (_countdownTime > 0) {
-        await Future.delayed(const Duration(seconds: 1));
-        _countdownTime--;
-        notifyListeners();
-      }
     } catch (e) {
-      // 请求失败时，停止倒计时并允许重新发送
+      // 显示错误提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('发送验证码失败，请稍后重试'),
+          backgroundColor: Colors.red,
+        ),
+      );
       _isCountingDown = false;
-      _countdownTime = 60; // 重置倒计时时间
+      _countdownTime = 60;
       notifyListeners();
-
-      // 可以在这里记录错误或显示错误提示
-      if (kDebugMode) {
-        print("发送验证码失败: $e");
-      }
+      return;
     }
 
-    // 请求成功或倒计时结束后，重置状态
+    // 倒计时逻辑
+    while (_countdownTime > 0) {
+      await Future.delayed(const Duration(seconds: 1));
+      _countdownTime--;
+      notifyListeners();
+    }
+
     _isCountingDown = false;
     notifyListeners();
   }
-
 
   Future<void> resetPassword(BuildContext context) async {
     _isLoading = true;
@@ -71,6 +70,16 @@ class ForgetPasswordViewModel extends ChangeNotifier {
       await _authService.resetPassword(email, password, emailCode);
       if (context.mounted) {
         context.go('/login');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // 显示错误提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('重置密码失败，请检查验证码是否正确'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       _isLoading = false;

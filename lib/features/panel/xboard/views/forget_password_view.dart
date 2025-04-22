@@ -51,9 +51,7 @@ class ForgetPasswordPage extends ConsumerWidget {
                   labelText: t.forgetPassword.newPassword,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      viewModel.obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      viewModel.obscurePassword ? Icons.visibility : Icons.visibility_off,
                     ),
                     onPressed: viewModel.togglePasswordVisibility,
                   ),
@@ -73,9 +71,7 @@ class ForgetPasswordPage extends ConsumerWidget {
                   suffixIcon: viewModel.isCountingDown
                       ? Text('${viewModel.countdownTime} s')
                       : TextButton(
-                          onPressed: viewModel.isCountingDown
-                              ? null
-                              : viewModel.sendVerificationCode,
+                          onPressed: viewModel.isCountingDown ? null : viewModel.sendVerificationCode,
                           child: Text(t.forgetPassword.sendCode),
                         ),
                 ),
@@ -88,12 +84,8 @@ class ForgetPasswordPage extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: viewModel.isLoading
-                    ? null
-                    : () => viewModel.resetPassword(context),
-                child: viewModel.isLoading
-                    ? const CircularProgressIndicator()
-                    : Text(t.forgetPassword.resetPassword),
+                onPressed: viewModel.isLoading ? null : () => viewModel.resetPassword(context),
+                child: viewModel.isLoading ? const CircularProgressIndicator() : Text(t.forgetPassword.resetPassword),
               ),
             ],
           ),

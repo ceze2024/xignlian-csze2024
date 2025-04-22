@@ -25,10 +25,7 @@ class InviteCodeService {
       final data = result["data"];
       // ignore: avoid_dynamic_calls
       final codes = data["codes"] as List;
-      return codes
-          .cast<Map<String, dynamic>>()
-          .map((json) => InviteCode.fromJson(json))
-          .toList();
+      return codes.cast<Map<String, dynamic>>().map((json) => InviteCode.fromJson(json)).toList();
     } else {
       throw Exception("Failed to retrieve invite codes");
     }
@@ -36,7 +33,7 @@ class InviteCodeService {
 
   // 获取完整邀请码链接的方法
   String getInviteLink(String code) {
-    final inviteLinkBase = "${HttpService.baseUrl}/#/register?code=";
+    final inviteLinkBase = "${HttpService.baseUrl}/index.php#/register?code=";
     if (HttpService.baseUrl.isEmpty) {
       throw Exception('Base URL is not set.');
     }

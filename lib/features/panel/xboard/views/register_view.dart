@@ -51,9 +51,7 @@ class RegisterPage extends ConsumerWidget {
                   labelText: t.register.password,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      registerViewModel.obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      registerViewModel.obscurePassword ? Icons.visibility : Icons.visibility_off,
                     ),
                     onPressed: registerViewModel.togglePasswordVisibility,
                   ),
@@ -78,8 +76,7 @@ class RegisterPage extends ConsumerWidget {
                   suffixIcon: registerViewModel.isCountingDown
                       ? Text('${registerViewModel.countdownTime} s')
                       : TextButton(
-                          onPressed: () =>
-                              registerViewModel.sendVerificationCode(context),
+                          onPressed: () => registerViewModel.sendVerificationCode(context),
                           child: Text(t.register.sendCode),
                         ),
                 ),
@@ -92,12 +89,8 @@ class RegisterPage extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: registerViewModel.isLoading
-                    ? null
-                    : () => registerViewModel.register(context),
-                child: registerViewModel.isLoading
-                    ? const CircularProgressIndicator()
-                    : Text(t.register.register),
+                onPressed: registerViewModel.isLoading ? null : () => registerViewModel.register(context),
+                child: registerViewModel.isLoading ? const CircularProgressIndicator() : Text(t.register.register),
               ),
             ],
           ),

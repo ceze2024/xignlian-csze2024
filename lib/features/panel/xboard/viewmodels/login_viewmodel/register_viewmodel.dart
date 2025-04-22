@@ -26,8 +26,7 @@ class RegisterViewModel extends ChangeNotifier {
   final TextEditingController inviteCodeController = TextEditingController();
   final TextEditingController emailCodeController = TextEditingController();
 
-  RegisterViewModel({required AuthService authService})
-      : _authService = authService;
+  RegisterViewModel({required AuthService authService}) : _authService = authService;
 
   Future<void> sendVerificationCode(BuildContext context) async {
     final email = emailController.text.trim();
@@ -36,15 +35,19 @@ class RegisterViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _authService.sendVerificationCode(email);
-
-      if (response["status"] == "success") {
-        _showSnackbar(context, "Verification code sent to $email");
-      } else {
-        _showSnackbar(context, response["message"].toString());
-      }
+      await _authService.sendVerificationCode(email);
     } catch (e) {
-      _showSnackbar(context, "Error: $e");
+      // 显示错误提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('发送验证码失败，请稍后重试'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      _isCountingDown = false;
+      _countdownTime = 60;
+      notifyListeners();
+      return;
     }
 
     // 倒计时逻辑
@@ -59,6 +62,10 @@ class RegisterViewModel extends ChangeNotifier {
   }
 
   Future<void> register(BuildContext context) async {
+    if (!formKey.currentState!.validate()) {
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -68,23 +75,20 @@ class RegisterViewModel extends ChangeNotifier {
     final emailCode = emailCodeController.text.trim();
 
     try {
-      final result = await _authService.register(
-        email,
-        password,
-        inviteCode,
-        emailCode,
-      );
-
-      if (result["status"] == "success") {
-        _showSnackbar(context, "Registration successful");
-        if (context.mounted) {
-          context.go('/login');
-        }
-      } else {
-        _showSnackbar(context, result["message"].toString());
+      await _authService.register(email, password, inviteCode, emailCode);
+      if (context.mounted) {
+        context.go('/login');
       }
     } catch (e) {
-      _showSnackbar(context, "Error: $e");
+      if (context.mounted) {
+        // 显示错误提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('注册失败，请检查信息是否正确'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -94,14 +98,6 @@ class RegisterViewModel extends ChangeNotifier {
   void togglePasswordVisibility() {
     _obscurePassword = !_obscurePassword;
     notifyListeners();
-  }
-
-  void _showSnackbar(BuildContext context, String message) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 3),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
