@@ -54,7 +54,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "app.startlink.com"
+        applicationId "app.starlink.com"
         minSdkVersion 21
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()

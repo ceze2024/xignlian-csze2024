@@ -163,7 +163,7 @@
         "confirmButton": "Logout"
     },
     "login": {
-        "welcome": "Welcome to startlink",
+        "welcome": "Welcome to starlink",
         "username": "Username",
         "password": "Password",
         "loginButton": "Login",
