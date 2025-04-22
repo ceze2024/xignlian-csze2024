@@ -1,11 +1,11 @@
 app_id: 6L903538-42B1-4596-G479-BJ779F21A65D
-publisher: starlinkvpn
+publisher: 星链
 publisher_url: https://github.com/hiddify/hiddify-next
-display_name: starlinkvpn
-executable_name: starlinkvpn.exe
-output_base_file_name: starlinkvpn-Windows-Setup-x64
+display_name: 星链
+executable_name: startlink.exe
+output_base_file_name: startlink-Windows-Setup-x64
 create_desktop_icon: true
-install_dir_name: "{autopf64}\\starlinkvpn"
+install_dir_name: "{autopf64}\\星链"
 setup_icon_file: ..\..\windows\runner\resources\app_icon.ico
 locales:
   - zh

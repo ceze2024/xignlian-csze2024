@@ -54,7 +54,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "app.starlinkvpn.com"
+        applicationId "app.startlink.com"
         minSdkVersion 21
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()

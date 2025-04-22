@@ -8,7 +8,7 @@
 PRODUCT_NAME = Hiddify
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = app.starlinkvpn.com
+PRODUCT_BUNDLE_IDENTIFIER = app.startlink.com
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2023 hiddify.com. All rights reserved.

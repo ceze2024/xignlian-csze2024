@@ -163,7 +163,7 @@
         "confirmButton": "Logout"
     },
     "login": {
-        "welcome": "Welcome to starlinkvpn",
+        "welcome": "Welcome to startlink",
         "username": "Username",
         "password": "Password",
         "loginButton": "Login",

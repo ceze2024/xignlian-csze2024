@@ -54,7 +54,7 @@
             "program": "lib/main.dart",
             "args": [
                 "--app-id",
-                "app.starlinkvpn.com"
+                "app.startlink.com"
             ],
             "deviceId": "designed-for-ipad",
         }
