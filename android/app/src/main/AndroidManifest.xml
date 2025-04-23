@@ -27,7 +27,7 @@
     <application
         android:name=".Application"
         android:banner="@mipmap/ic_banner"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher2"
         android:label="星链"
         android:roundIcon="@mipmap/ic_launcher_round"
         tools:targetApi="31">
