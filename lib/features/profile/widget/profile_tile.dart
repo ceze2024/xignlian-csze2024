@@ -19,6 +19,53 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
+// 添加一个显示流量超出限额弹窗的函数
+Future<void> showTrafficExceededDialog(BuildContext context, WidgetRef ref) async {
+  final t = ref.watch(translationsProvider);
+  return showDialog(
+    context: context,
+    barrierDismissible: false, // 用户必须点击按钮关闭对话框
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('流量超出限额提醒', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              Text('您的账户流量已用尽，无法继续使用服务。请考虑以下选项：'),
+              const SizedBox(height: 12),
+              Text('1. 购买新的套餐'),
+              Text('2. 等待下个周期流量重置'),
+              Text('3. 联系客服咨询'),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text('购买套餐'),
+            onPressed: () {
+              // 导航到购买套餐页面
+              context.pop();
+              const PurchaseRoute().go(context);
+            },
+          ),
+          TextButton(
+            child: Text('确定'),
+            onPressed: () {
+              context.pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 class ProfileTile extends HookConsumerWidget {
   const ProfileTile({
     super.key,
@@ -49,6 +96,14 @@ class ProfileTile extends HookConsumerWidget {
       RemoteProfileEntity(:final subInfo) => subInfo,
       _ => null,
     };
+
+    // 检查是否流量超出限额，如果是活动配置文件且显示在主页面，则显示弹窗
+    if (isMain && profile.active && subInfo != null && subInfo.ratio >= 1) {
+      // 使用addPostFrameCallback确保在构建完成后显示弹窗
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showTrafficExceededDialog(context, ref);
+      });
+    }
 
     final effectiveMargin = isMain ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8) : const EdgeInsets.only(left: 12, right: 12, bottom: 12);
     final double effectiveElevation = profile.active ? 12 : 4;
