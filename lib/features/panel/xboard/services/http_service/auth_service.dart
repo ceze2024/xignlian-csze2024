@@ -18,10 +18,10 @@ class AuthService {
       // 同时保存 auth_data 和 token
       if (result['data'] != null) {
         if (result['data']['auth_data'] != null) {
-          await storeToken(result['data']['auth_data']); // 保存用于API认证的token
+          await storeToken(result['data']['auth_data'].toString()); // 保存用于API认证的token
         }
         if (result['data']['token'] != null) {
-          await storeLoginToken(result['data']['token']); // 保存用于自动登录的token
+          await storeLoginToken(result['data']['token'].toString()); // 保存用于自动登录的token
         }
       }
 
