@@ -96,7 +96,10 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '17'
-          
+      
+      - name: Clean Flutter Build
+        run: flutter clean
+            
       - name: Prepare for Android
         run: |
           make android-prepare
