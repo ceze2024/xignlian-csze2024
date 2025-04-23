@@ -162,6 +162,7 @@ android-aab-release:
 	ls -R build/app/outputs
 
 windows-release:
+	mkdir -p dist/1.1.2+20507
 	dart pub global activate flutter_distributor
 	flutter_distributor package --flutter-build-args=verbose --platform windows --targets exe,msix $(DISTRIBUTOR_ARGS)
 

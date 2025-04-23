@@ -8,10 +8,8 @@ create_desktop_icon: true
 install_dir_name: "{autopf64}\\Hiddify"
 setup_icon_file: ..\..\windows\runner\resources\app_icon.ico
 locales:
-  - ar
   - en
-  - fa
+  - zh
   - ru
-  - pt
   - tr
 script_template: inno_setup.sas

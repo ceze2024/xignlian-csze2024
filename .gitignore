@@ -40,7 +40,7 @@ migrate_working_dir/
 **/*.dll
 **/*.dylib
 **/*.xcframework
-/dist/
+
 
 /assets/core/*
 !/assets/core/.gitkeep
