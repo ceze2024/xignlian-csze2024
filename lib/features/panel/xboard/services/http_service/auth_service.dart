@@ -44,10 +44,10 @@ class AuthService {
     );
   }
 
-  Future<Map<String, dynamic>> sendVerificationCode(String email) async {
+  Future<Map<String, dynamic>> sendVerificationCode(String email, {bool isForget = false}) async {
     return await _httpService.postRequest(
       "/api/v1/passport/comm/sendEmailVerify",
-      {'email': email},
+      {'email': email, 'isforget': isForget ? 1 : 0},
     );
   }
 

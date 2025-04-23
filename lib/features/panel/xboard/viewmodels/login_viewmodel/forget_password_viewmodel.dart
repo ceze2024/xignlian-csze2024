@@ -38,7 +38,7 @@ class ForgetPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _authService.sendVerificationCode(email);
+      final response = await _authService.sendVerificationCode(email, isForget: true);
 
       if (response["status"] == "success") {
         _showSnackbar(context, "验证码已发送至 $email");
