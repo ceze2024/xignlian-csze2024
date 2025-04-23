@@ -9,7 +9,4 @@ install_dir_name: "{autopf64}\\Hiddify"
 setup_icon_file: D:\a\xignlian-csze2024\xignlian-csze2024\windows\runner\resources\app_icon.ico
 locales:
   - en
-  - zh
-  - ru
-  - tr
 script_template: inno_setup.sas
