@@ -33,6 +33,7 @@ class ForgetPasswordPage extends ConsumerWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
+          key: viewModel.formKey,
           child: Column(
             children: [
               TextFormField(
