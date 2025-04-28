@@ -3,31 +3,56 @@ import 'package:hiddify/features/panel/xboard/services/http_service/http_service
 import 'package:url_launcher/url_launcher.dart';
 import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/domain_service.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class AuthService {
   final HttpService _httpService = HttpService();
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  // 写日志到本地文件
+  Future<void> _writeLog(String message) async {
+    final now = DateTime.now().toString().split('.').first;
+    final logLine = '[AuthService] $now: $message\n';
     try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/app_login.log');
+      await file.writeAsString(logLine, mode: FileMode.append);
+    } catch (e) {
+      // 忽略日志写入错误
+    }
+  }
+
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    await _writeLog('login() called, email: $email');
+    try {
+      await _writeLog('准备发起POST请求');
+      final reqStart = DateTime.now();
       final result = await _httpService.postRequest(
         "/api/v1/passport/auth/login",
         {"email": email, "password": password},
         requiresHeaders: true,
       );
+      final reqEnd = DateTime.now();
+      await _writeLog('POST请求返回, 耗时: [33m${reqEnd.difference(reqStart).inMilliseconds}ms[0m');
+      await _writeLog('POST响应内容: ${result.toString()}');
 
       // 同时保存 auth_data 和 token
       if (result['data'] != null) {
         if (result['data']['auth_data'] != null) {
-          await storeToken(result['data']['auth_data'].toString()); // 保存用于API认证的token
+          await _writeLog('准备保存auth_data token');
+          await storeToken(result['data']['auth_data'].toString());
+          await _writeLog('保存auth_data token完成');
         }
         if (result['data']['token'] != null) {
-          await storeLoginToken(result['data']['token'].toString()); // 保存用于自动登录的token
+          await _writeLog('准备保存login token');
+          await storeLoginToken(result['data']['token'].toString());
+          await _writeLog('保存login token完成');
         }
       }
-
+      await _writeLog('login() 返回正常');
       return result;
     } catch (e) {
-      // 转换错误信息为用户友好的提示
+      await _writeLog('login() 异常: $e');
       throw '密码错误，请重新输入';
     }
   }
