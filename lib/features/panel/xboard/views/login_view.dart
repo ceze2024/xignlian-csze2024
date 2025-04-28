@@ -26,134 +26,46 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  bool _autoLoginTried = false;
   bool _autoLoginFailed = false;
-  int _autoLoginProgress = 0;
-  Timer? _progressTimer;
 
   @override
-  void dispose() {
-    _progressTimer?.cancel();
-    super.dispose();
-  }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final loginViewModel = ref.read(loginViewModelProvider);
+    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
 
-  void _startProgressTimer() {
-    _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (mounted) {
-        setState(() {
-          _autoLoginProgress = (_autoLoginProgress + 1) % 101;
-        });
-      }
-    });
-  }
+    // 自动登录逻辑：域名初始化成功且有账号密码
+    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried) {
+      _autoLoginTried = true;
+      setState(() {
+        _autoLoginFailed = false;
+      });
 
-  void _stopProgressTimer() {
-    _progressTimer?.cancel();
-    _progressTimer = null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        // 检查是否已经登录
-        final isLoggedIn = ref.read(authProvider);
-        if (isLoggedIn) {
-          if (mounted) {
-            context.go('/');
-          }
-          return;
-        }
-
-        // 检查域名连通性
-        final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-        if (domainCheckViewModel.isSuccess) {
-          await _tryAutoLogin();
-        }
-
-        // 监听域名检查状态
-        ref.listen(domainCheckViewModelProvider, (previous, current) {
-          if (current.isSuccess) {
-            _tryAutoLogin();
-          }
-        });
-      } catch (e) {
-        if (mounted) {
-          _showErrorSnackbar(
-            context,
-            "初始化失败，请重试。",
-            Colors.red,
-          );
-        }
-      }
-    });
-  }
-
-  Future<void> _tryAutoLogin() async {
-    try {
-      final loginViewModel = ref.read(loginViewModelProvider);
-      final prefs = await SharedPreferences.getInstance();
-      final loggedOut = prefs.getBool('user_logged_out') ?? false;
-
-      // 从 SharedPreferences 中获取保存的凭据
-      final savedUsername = prefs.getString('saved_username') ?? '';
-      final savedPassword = prefs.getString('saved_password') ?? '';
-      final isRememberMe = prefs.getBool('is_remember_me') ?? true;
-
-      // 如果保存了凭据且记住密码被选中
-      final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
-
-      if (hasSavedCredentials && !loggedOut) {
-        setState(() {
-          _autoLoginFailed = false;
-          _autoLoginProgress = 0;
-        });
-
-        _startProgressTimer();
-
+      Future.microtask(() async {
         try {
-          // 检查网络连接
-          final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-          if (!domainCheckViewModel.isSuccess) {
-            throw Exception('网络连接未就绪');
-          }
-
           await loginViewModel.login(
-            savedUsername,
-            savedPassword,
+            loginViewModel.usernameController.text,
+            loginViewModel.passwordController.text,
             context,
             ref,
           );
-
-          _stopProgressTimer();
-          if (mounted) {
+          if (context.mounted) {
             context.go('/');
           }
         } catch (e) {
-          _stopProgressTimer();
-          if (!mounted) return;
-          setState(() {
-            _autoLoginFailed = true;
-          });
-          _showErrorSnackbar(
-            context,
-            "自动登录失败，请手动登录。",
-            Colors.red,
-          );
+          if (context.mounted) {
+            setState(() {
+              _autoLoginFailed = true;
+            });
+            _showErrorSnackbar(
+              context,
+              "自动登录失败，请手动登录。",
+              Colors.red,
+            );
+          }
         }
-      }
-    } catch (e) {
-      _stopProgressTimer();
-      if (!mounted) return;
-      setState(() {
-        _autoLoginFailed = true;
       });
-      _showErrorSnackbar(
-        context,
-        "自动登录失败，请手动登录。",
-        Colors.red,
-      );
     }
   }
 
@@ -186,28 +98,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      if (loginViewModel.isLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 8),
-                              LinearProgressIndicator(
-                                value: _autoLoginProgress / 100,
-                                backgroundColor: Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).primaryColor,
+                      if (_autoLoginTried && loginViewModel.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '正在自动登录... $_autoLoginProgress%',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                                SizedBox(width: 8),
+                                Text('正在自动登录...'),
+                              ],
+                            ),
                           ),
                         ),
                       if (_autoLoginFailed)
