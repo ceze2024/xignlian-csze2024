@@ -58,14 +58,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _addLog('_autoLoginTried: $_autoLoginTried');
     _addLog('isLoggedOut: $isLoggedOut');
 
-    // 监听 domainCheckViewModel 的状态变化
-    ref.listen(domainCheckViewModelProvider, (previous, next) {
-      _addLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
-      if (next.isSuccess && !_autoLoginTried) {
-        _checkAutoLogin();
-      }
-    });
-
     // 如果 domainCheckViewModel 已经是成功状态，直接尝试自动登录
     if (domainCheckViewModel.isSuccess && !_autoLoginTried) {
       _checkAutoLogin();
@@ -128,6 +120,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final loginViewModel = ref.watch(loginViewModelProvider);
     final t = ref.watch(translationsProvider);
     final domainCheckViewModel = ref.watch(domainCheckViewModelProvider);
+
+    // 只在 build 方法中监听 domainCheckViewModel 状态变化，确保自动登录只触发一次
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listen(domainCheckViewModelProvider, (previous, next) {
+        if (next.isSuccess && !_autoLoginTried) {
+          _addLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
+          _checkAutoLogin();
+        }
+      });
+    });
+
     return Scaffold(
       appBar: AppBar(
         // title: const Text('Login'),
