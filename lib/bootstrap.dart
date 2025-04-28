@@ -79,6 +79,16 @@ Future<void> lazyBootstrap(
       if (isValid) {
         container.read(authProvider.notifier).state = true; // 设置为已登录
         print("User is logged in");
+        // 直接跳主页
+        runApp(
+          ProviderScope(
+            parent: container,
+            child: SentryUserInteractionWidget(
+              child: const App(),
+            ),
+          ),
+        );
+        return;
       } else {
         container.read(authProvider.notifier).state = false; // 设置为未登录
         print("Token is invalid, setting user to not logged in");

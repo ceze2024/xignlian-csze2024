@@ -31,3 +31,13 @@ Future<String?> getLoginToken() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString(_loginTokenKey);
 }
+
+Future<Map<String, String>?> getSavedCredentials() async {
+  final prefs = await SharedPreferences.getInstance();
+  final email = prefs.getString('saved_username');
+  final password = prefs.getString('saved_password');
+  if (email != null && password != null) {
+    return {'email': email, 'password': password};
+  }
+  return null;
+}

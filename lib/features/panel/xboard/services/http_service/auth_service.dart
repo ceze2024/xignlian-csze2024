@@ -125,4 +125,17 @@ class AuthService {
       throw '打开订阅页面失败: $e';
     }
   }
+
+  // 静默登录：用本地保存的邮箱密码自动登录
+  static Future<bool> silentLogin() async {
+    final creds = await getSavedCredentials();
+    if (creds == null) return false;
+    try {
+      final authService = AuthService();
+      await authService.login(creds['email']!, creds['password']!);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
