@@ -23,6 +23,45 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  bool _autoLoginTried = false;
+  bool _autoLoginFailed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final loginViewModel = ref.read(loginViewModelProvider);
+    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
+    // 自动登录逻辑：域名初始化成功且有账号密码
+    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried) {
+      _autoLoginTried = true;
+      setState(() {
+        _autoLoginFailed = false;
+      });
+      Future.microtask(() async {
+        try {
+          await loginViewModel.login(
+            loginViewModel.usernameController.text,
+            loginViewModel.passwordController.text,
+            context,
+            ref,
+          );
+          if (context.mounted) {
+            context.go('/');
+          }
+        } catch (e) {
+          setState(() {
+            _autoLoginFailed = true;
+          });
+          _showErrorSnackbar(
+            context,
+            "自动登录失败，请手动登录。",
+            Colors.red,
+          );
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loginViewModel = ref.watch(loginViewModelProvider);
@@ -52,6 +91,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
+                      if (_autoLoginTried && loginViewModel.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                SizedBox(width: 8),
+                                Text('正在自动登录...'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_autoLoginFailed)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Center(
+                            child: Text(
+                              '自动登录失败，请手动登录。',
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       Icon(
                         Icons.person,
                         size: 50,

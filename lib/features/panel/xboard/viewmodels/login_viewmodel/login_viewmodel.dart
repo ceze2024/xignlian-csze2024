@@ -19,8 +19,7 @@ class LoginViewModel extends ChangeNotifier {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  LoginViewModel({required AuthService authService})
-      : _authService = authService {
+  LoginViewModel({required AuthService authService}) : _authService = authService {
     _loadSavedCredentials();
   }
 
@@ -28,7 +27,7 @@ class LoginViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     usernameController.text = prefs.getString('saved_username') ?? '';
     passwordController.text = prefs.getString('saved_password') ?? '';
-    _isRememberMe = prefs.getBool('is_remember_me') ?? false;
+    _isRememberMe = prefs.getBool('is_remember_me') ?? true;
     notifyListeners();
   }
 

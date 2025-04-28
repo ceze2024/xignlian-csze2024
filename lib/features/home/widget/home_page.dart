@@ -24,11 +24,24 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider);
     final hasAnyProfile = ref.watch(hasAnyProfileProvider);
     final activeProfile = ref.watch(activeProfileProvider);
+    final domainInitFailed = ref.watch(domainInitFailedProvider);
 
     return Scaffold(
       body: Stack(
         alignment: Alignment.bottomCenter,
         children: [
+          if (domainInitFailed)
+            Container(
+              width: double.infinity,
+              color: Colors.red.withOpacity(0.9),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Center(
+                child: Text(
+                  '未能连接到服务器，部分功能可能不可用，请检查网络或稍后重试',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           CustomScrollView(
             slivers: [
               NestedAppBar(
@@ -73,8 +86,7 @@ class HomePage extends HookConsumerWidget {
                                 ],
                               ),
                             ),
-                            if (MediaQuery.sizeOf(context).width < 840)
-                              const ActiveProxyFooter(),
+                            if (MediaQuery.sizeOf(context).width < 840) const ActiveProxyFooter(),
                           ],
                         ),
                       ),
@@ -82,15 +94,15 @@ class HomePage extends HookConsumerWidget {
                   ),
                 // 修改无活跃配置文件时的提示信息
                 AsyncData() => switch (hasAnyProfile) {
-                    AsyncData(value: true) =>
-                      const EmptyActiveProfileHomeBody(),
+                    AsyncData(value: true) => const EmptyActiveProfileHomeBody(),
                     _ => SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(t.home.noSubscriptionMsg,
+                              Text(
+                                t.home.noSubscriptionMsg,
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
@@ -107,8 +119,7 @@ class HomePage extends HookConsumerWidget {
                         ),
                       ),
                   },
-                AsyncError(:final error) =>
-                  SliverErrorBodyPlaceholder(t.presentShortError(error)),
+                AsyncError(:final error) => SliverErrorBodyPlaceholder(t.presentShortError(error)),
                 _ => const SliverToBoxAdapter(),
               },
             ],
