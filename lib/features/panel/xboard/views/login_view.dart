@@ -31,68 +31,153 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
+    print('LoginPage initState 开始');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 检查是否已经登录
-      final isLoggedIn = ref.read(authProvider);
-      if (isLoggedIn) {
-        if (mounted) {
-          context.go('/');
+      print('LoginPage postFrameCallback 开始');
+      try {
+        // 检查是否已经登录
+        final isLoggedIn = ref.read(authProvider);
+        print('当前登录状态: $isLoggedIn');
+        if (isLoggedIn) {
+          print('用户已登录，跳转到首页');
+          if (mounted) {
+            context.go('/');
+          }
+          return;
         }
-        return;
-      }
 
-      // 监听域名检查状态
-      ref.listen(domainCheckViewModelProvider, (previous, current) {
-        if (current.isSuccess && !_autoLoginTried) {
-          _tryAutoLogin();
+        // 从 SharedPreferences 中获取自动登录尝试状态
+        final prefs = await SharedPreferences.getInstance();
+        _autoLoginTried = prefs.getBool('auto_login_tried') ?? false;
+        print('自动登录尝试状态: $_autoLoginTried');
+
+        // 监听域名检查状态
+        print('开始监听域名检查状态');
+        ref.listen(domainCheckViewModelProvider, (previous, current) {
+          print('域名检查状态变化:');
+          print('之前状态: ${previous?.isSuccess}');
+          print('当前状态: ${current.isSuccess}');
+          print('检查中: ${current.isChecking}');
+          print('重试次数: ${current.retryCount}');
+
+          if (current.isSuccess && !_autoLoginTried) {
+            print('域名检查成功，准备自动登录');
+            _tryAutoLogin();
+          }
+        });
+      } catch (e) {
+        print('初始化错误: $e');
+        if (mounted) {
+          _showErrorSnackbar(
+            context,
+            "初始化失败，请重试。",
+            Colors.red,
+          );
         }
-      });
+      }
     });
   }
 
   Future<void> _tryAutoLogin() async {
-    if (_autoLoginTried) return; // 防止重复尝试自动登录
+    print('开始尝试自动登录');
+    if (_autoLoginTried) {
+      print('已经尝试过自动登录，跳过');
+      return;
+    }
 
-    final loginViewModel = ref.read(loginViewModelProvider);
-    final prefs = await SharedPreferences.getInstance();
-    final loggedOut = prefs.getBool('user_logged_out') ?? false;
+    try {
+      print('获取登录视图模型');
+      final loginViewModel = ref.read(loginViewModelProvider);
+      print('获取 SharedPreferences 实例');
+      final prefs = await SharedPreferences.getInstance();
+      print('获取用户登出状态');
+      final loggedOut = prefs.getBool('user_logged_out') ?? false;
 
-    // 从 SharedPreferences 中获取保存的凭据
-    final savedUsername = prefs.getString('saved_username') ?? '';
-    final savedPassword = prefs.getString('saved_password') ?? '';
-    final isRememberMe = prefs.getBool('is_remember_me') ?? true;
+      // 从 SharedPreferences 中获取保存的凭据
+      print('获取保存的用户凭据');
+      final savedUsername = prefs.getString('saved_username') ?? '';
+      final savedPassword = prefs.getString('saved_password') ?? '';
+      final isRememberMe = prefs.getBool('is_remember_me') ?? true;
 
-    // 如果保存了凭据且记住密码被选中
-    final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
+      print('自动登录凭据检查:');
+      print('用户名: ${savedUsername.isNotEmpty ? "已保存" : "未保存"}');
+      print('密码: ${savedPassword.isNotEmpty ? "已保存" : "未保存"}');
+      print('记住密码: $isRememberMe');
+      print('已登出: $loggedOut');
 
-    if (hasSavedCredentials && !loggedOut) {
-      setState(() {
-        _autoLoginTried = true;
-        _autoLoginFailed = false;
-      });
+      // 如果保存了凭据且记住密码被选中
+      final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
 
-      try {
-        // 使用保存的凭据进行登录
-        await loginViewModel.login(
-          savedUsername,
-          savedPassword,
-          context,
-          ref,
-        );
-        if (mounted) {
-          context.go('/');
-        }
-      } catch (e) {
-        if (!mounted) return;
+      if (hasSavedCredentials && !loggedOut) {
+        print('开始执行自动登录');
         setState(() {
-          _autoLoginFailed = true;
+          _autoLoginTried = true;
+          _autoLoginFailed = false;
         });
-        _showErrorSnackbar(
-          context,
-          "自动登录失败，请手动登录。",
-          Colors.red,
-        );
+
+        // 保存自动登录尝试状态
+        print('保存自动登录尝试状态到 SharedPreferences');
+        await prefs.setBool('auto_login_tried', true);
+        print('已保存自动登录尝试状态');
+
+        try {
+          // 使用保存的凭据进行登录
+          print('开始调用登录接口');
+          print('用户名长度: ${savedUsername.length}');
+          print('密码长度: ${savedPassword.length}');
+          await loginViewModel.login(
+            savedUsername,
+            savedPassword,
+            context,
+            ref,
+          );
+          print('登录成功');
+          if (mounted) {
+            print('准备跳转到首页');
+            context.go('/');
+          }
+        } catch (e, stackTrace) {
+          print('登录过程出错:');
+          print('错误类型: ${e.runtimeType}');
+          print('错误信息: $e');
+          print('堆栈跟踪:');
+          print(stackTrace);
+          if (!mounted) {
+            print('组件已卸载，无法显示错误提示');
+            return;
+          }
+          setState(() {
+            _autoLoginFailed = true;
+          });
+          _showErrorSnackbar(
+            context,
+            "自动登录失败，请手动登录。",
+            Colors.red,
+          );
+        }
+      } else {
+        print('自动登录条件不满足:');
+        print('hasSavedCredentials: $hasSavedCredentials');
+        print('loggedOut: $loggedOut');
       }
+    } catch (e, stackTrace) {
+      print('自动登录过程出错:');
+      print('错误类型: ${e.runtimeType}');
+      print('错误信息: $e');
+      print('堆栈跟踪:');
+      print(stackTrace);
+      if (!mounted) {
+        print('组件已卸载，无法显示错误提示');
+        return;
+      }
+      setState(() {
+        _autoLoginFailed = true;
+      });
+      _showErrorSnackbar(
+        context,
+        "自动登录失败，请手动登录。",
+        Colors.red,
+      );
     }
   }
 
