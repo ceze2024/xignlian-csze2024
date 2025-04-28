@@ -28,41 +28,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _autoLoginFailed = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin();
+    });
+  }
+
+  Future<void> _tryAutoLogin() async {
     final loginViewModel = ref.read(loginViewModelProvider);
     final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-    Future.microtask(() async {
-      final prefs = await SharedPreferences.getInstance();
-      final loggedOut = prefs.getBool('user_logged_out') ?? false;
-      // 自动登录逻辑：域名初始化成功且有账号密码且未注销
-      if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !loggedOut) {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedOut = prefs.getBool('user_logged_out') ?? false;
+
+    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !loggedOut) {
+      setState(() {
         _autoLoginTried = true;
-        setState(() {
-          _autoLoginFailed = false;
-        });
-        try {
-          await loginViewModel.login(
-            loginViewModel.usernameController.text,
-            loginViewModel.passwordController.text,
-            context,
-            ref,
-          );
-          if (context.mounted) {
-            context.go('/');
-          }
-        } catch (e) {
-          setState(() {
-            _autoLoginFailed = true;
-          });
-          _showErrorSnackbar(
-            context,
-            "自动登录失败，请手动登录。",
-            Colors.red,
-          );
+        _autoLoginFailed = false;
+      });
+      try {
+        await loginViewModel.login(
+          loginViewModel.usernameController.text,
+          loginViewModel.passwordController.text,
+          context,
+          ref,
+        );
+        if (mounted) {
+          context.go('/');
         }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _autoLoginFailed = true;
+        });
+        _showErrorSnackbar(
+          context,
+          "自动登录失败，请手动登录。",
+          Colors.red,
+        );
       }
-    });
+    }
   }
 
   @override
