@@ -77,7 +77,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _addLog('_autoLoginTried: $_autoLoginTried');
     _addLog('isLoggedOut: $isLoggedOut');
 
-    // 自动登录逻辑：域名初始化成功且有账号密码且未注销
     if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
       _addLog('满足自动登录条件，开始自动登录');
       _autoLoginTried = true;
@@ -86,16 +85,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _autoLoginFailed = false;
         });
       }
-
       try {
+        _addLog('loginViewModel.login 开始: ${DateTime.now()}');
         await loginViewModel.login(
           loginViewModel.usernameController.text,
           loginViewModel.passwordController.text,
           context as BuildContext,
           ref,
         );
+        _addLog('loginViewModel.login 返回: ${DateTime.now()}');
         if (mounted) {
+          _addLog('跳转主页前: ${DateTime.now()}');
           context.go('/');
+          _addLog('跳转主页后: ${DateTime.now()}');
         }
       } catch (e) {
         _addLog('自动登录失败: $e');
@@ -276,19 +278,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ElevatedButton(
                           onPressed: domainCheckViewModel.isSuccess
                               ? () async {
+                                  _addLog('点击登录按钮: ${DateTime.now()}');
                                   final email = loginViewModel.usernameController.text;
                                   final password = loginViewModel.passwordController.text;
                                   try {
+                                    _addLog('loginViewModel.login 开始: ${DateTime.now()}');
                                     await loginViewModel.login(
                                       email,
                                       password,
                                       context as BuildContext,
                                       ref,
                                     );
+                                    _addLog('loginViewModel.login 返回: ${DateTime.now()}');
                                     if (context.mounted) {
+                                      _addLog('跳转主页前: ${DateTime.now()}');
                                       context.go('/');
+                                      _addLog('跳转主页后: ${DateTime.now()}');
                                     }
                                   } catch (e) {
+                                    _addLog('登录失败: $e');
                                     _showErrorSnackbar(
                                       context,
                                       "${t.login.loginErr}: $e",
