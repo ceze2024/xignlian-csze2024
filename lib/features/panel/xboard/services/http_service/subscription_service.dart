@@ -24,6 +24,9 @@ class SubscriptionService {
             'Authorization': accessToken,
           },
         );
+        if (result['status'] != 'success') {
+          throw Exception('业务失败: \\${result['message'] ?? ''}');
+        }
         if (result.containsKey("data")) {
           final data = result["data"];
           if (data is Map<String, dynamic> && data.containsKey("subscribe_url")) {
@@ -80,6 +83,9 @@ class SubscriptionService {
             'Authorization': accessToken,
           },
         );
+        if (result['status'] != 'success') {
+          throw Exception('业务失败: \\${result['message'] ?? ''}');
+        }
         if (result.containsKey("data")) {
           final data = result["data"];
           if (data is String) {

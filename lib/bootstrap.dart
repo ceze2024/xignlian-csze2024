@@ -75,8 +75,9 @@ Future<void> lazyBootstrap(
   container.read(domainInitFailedProvider.notifier).state = domainInitFailed;
 
   try {
-    final token = await getToken();
-    await _writeLog('Retrieved token: $token');
+    final loginToken = await getLoginToken();
+    final token = loginToken ?? await getToken();
+    await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
 
     if (token != null) {
       await _writeLog('Validating token...');
