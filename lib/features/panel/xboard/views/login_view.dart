@@ -1,8 +1,9 @@
-@ -1,251 +1,318 @@
 // views/login_view.dart
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold, AppBar, Colors, Theme, Icons;
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
@@ -43,7 +44,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           await loginViewModel.login(
             loginViewModel.usernameController.text,
             loginViewModel.passwordController.text,
-            context,
+            context as BuildContext,
             ref,
           );
           if (context.mounted) {
@@ -180,7 +181,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         children: [
                           Checkbox(
                             value: loginViewModel.isRememberMe,
-                            onChanged: (value) {
+                            onChanged: (bool? value) {
                               loginViewModel.toggleRememberMe(value ?? false);
                             },
                           ),
@@ -200,7 +201,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     await loginViewModel.login(
                                       email,
                                       password,
-                                      context,
+                                      context as BuildContext,
                                       ref,
                                     );
                                     if (context.mounted) {
