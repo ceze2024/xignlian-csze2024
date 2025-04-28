@@ -28,16 +28,48 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   bool _autoLoginTried = false;
   bool _autoLoginFailed = false;
+  List<String> _logs = [];
+
+  void _addLog(String message) {
+    setState(() {
+      _logs.add('${DateTime.now().toString().split('.').first}: $message');
+      if (_logs.length > 10) {
+        _logs.removeAt(0);
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    _initializeAutoLogin();
+  }
+
+  Future<void> _initializeAutoLogin() async {
+    final loginViewModel = ref.read(loginViewModelProvider);
+    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
+
+    _addLog('自动登录初始化检查:');
+    _addLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
+    _addLog('username: ${loginViewModel.usernameController.text}');
+    _addLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
+    _addLog('_autoLoginTried: $_autoLoginTried');
+    _addLog('isLoggedOut: $isLoggedOut');
+
     // 监听 domainCheckViewModel 的状态变化
     ref.listen(domainCheckViewModelProvider, (previous, next) {
+      _addLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
       if (next.isSuccess && !_autoLoginTried) {
         _checkAutoLogin();
       }
     });
+
+    // 如果 domainCheckViewModel 已经是成功状态，直接尝试自动登录
+    if (domainCheckViewModel.isSuccess && !_autoLoginTried) {
+      _checkAutoLogin();
+    }
   }
 
   Future<void> _checkAutoLogin() async {
@@ -46,9 +78,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
 
+    _addLog('尝试自动登录:');
+    _addLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
+    _addLog('username: ${loginViewModel.usernameController.text}');
+    _addLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
+    _addLog('_autoLoginTried: $_autoLoginTried');
+    _addLog('isLoggedOut: $isLoggedOut');
+
     // 自动登录逻辑：域名初始化成功且有账号密码且未注销
     if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
-      // 增加对注销状态的检查
+      _addLog('满足自动登录条件，开始自动登录');
       _autoLoginTried = true;
       if (mounted) {
         setState(() {
@@ -67,6 +106,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           context.go('/');
         }
       } catch (e) {
+        _addLog('自动登录失败: $e');
         if (mounted) {
           setState(() {
             _autoLoginFailed = true;
@@ -78,6 +118,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           );
         }
       }
+    } else {
+      _addLog('不满足自动登录条件');
     }
   }
 
@@ -110,6 +152,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
+                      // 添加日志显示区域
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        height: 200,
+                        child: ListView.builder(
+                          itemCount: _logs.length,
+                          itemBuilder: (context, index) {
+                            return Text(
+                              _logs[index],
+                              style: const TextStyle(fontSize: 12),
+                            );
+                          },
+                        ),
+                      ),
                       if (_autoLoginTried && loginViewModel.isLoading)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
