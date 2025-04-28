@@ -30,8 +30,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _autoLoginFailed = false;
 
   @override
-  void didChangeDependencies() async {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
     final loginViewModel = ref.read(loginViewModelProvider);
     final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
     final prefs = await SharedPreferences.getInstance();
@@ -41,21 +45,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
       // 增加对注销状态的检查
       _autoLoginTried = true;
-      setState(() {
-        _autoLoginFailed = false;
-      });
-      Future.microtask(() async {
-        try {
-          await loginViewModel.login(
-            loginViewModel.usernameController.text,
-            loginViewModel.passwordController.text,
-            context as BuildContext,
-            ref,
-          );
-          if (context.mounted) {
-            context.go('/');
-          }
-        } catch (e) {
+      if (mounted) {
+        setState(() {
+          _autoLoginFailed = false;
+        });
+      }
+
+      try {
+        await loginViewModel.login(
+          loginViewModel.usernameController.text,
+          loginViewModel.passwordController.text,
+          context as BuildContext,
+          ref,
+        );
+        if (mounted) {
+          context.go('/');
+        }
+      } catch (e) {
+        if (mounted) {
           setState(() {
             _autoLoginFailed = true;
           });
@@ -65,7 +72,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Colors.red,
           );
         }
-      });
+      }
     }
   }
 
