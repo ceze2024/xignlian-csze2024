@@ -10,6 +10,7 @@ import 'package:hiddify/features/panel/xboard/services/http_service/auth_service
 import 'package:hiddify/features/panel/xboard/viewmodels/login_viewmodel/login_viewmodel.dart';
 import 'package:hiddify/features/panel/xboard/views/domain_check_indicator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider((ref) {
   return LoginViewModel(
@@ -29,12 +30,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _autoLoginFailed = false;
 
   @override
-  void didChangeDependencies() {
+  void didChangeDependencies() async {
     super.didChangeDependencies();
     final loginViewModel = ref.read(loginViewModelProvider);
     final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-    // 自动登录逻辑：域名初始化成功且有账号密码
-    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried) {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
+
+    // 自动登录逻辑：域名初始化成功且有账号密码且未注销
+    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
+      // 增加对注销状态的检查
       _autoLoginTried = true;
       setState(() {
         _autoLoginFailed = false;

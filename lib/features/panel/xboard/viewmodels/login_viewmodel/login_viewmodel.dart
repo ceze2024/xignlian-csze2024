@@ -25,9 +25,18 @@ class LoginViewModel extends ChangeNotifier {
 
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
-    usernameController.text = prefs.getString('saved_username') ?? '';
-    passwordController.text = prefs.getString('saved_password') ?? '';
-    _isRememberMe = prefs.getBool('is_remember_me') ?? true;
+    final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
+
+    if (!isLoggedOut) {
+      // 只有在未注销状态下才加载保存的凭证
+      usernameController.text = prefs.getString('saved_username') ?? '';
+      passwordController.text = prefs.getString('saved_password') ?? '';
+      _isRememberMe = prefs.getBool('is_remember_me') ?? true;
+    } else {
+      usernameController.text = '';
+      passwordController.text = '';
+      _isRememberMe = false;
+    }
     notifyListeners();
   }
 
