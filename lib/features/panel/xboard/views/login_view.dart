@@ -10,6 +10,7 @@ import 'package:hiddify/features/panel/xboard/viewmodels/login_viewmodel/login_v
 import 'package:hiddify/features/panel/xboard/views/domain_check_indicator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 final loginViewModelProvider = ChangeNotifierProvider((ref) {
   return LoginViewModel(
@@ -25,48 +26,59 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  bool _autoLoginTried = false;
   bool _autoLoginFailed = false;
+  int _autoLoginProgress = 0;
+  Timer? _progressTimer;
+
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (mounted) {
+        setState(() {
+          _autoLoginProgress = (_autoLoginProgress + 1) % 101;
+        });
+      }
+    });
+  }
+
+  void _stopProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+  }
 
   @override
   void initState() {
     super.initState();
-    print('LoginPage initState 开始');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      print('LoginPage postFrameCallback 开始');
       try {
         // 检查是否已经登录
         final isLoggedIn = ref.read(authProvider);
-        print('当前登录状态: $isLoggedIn');
         if (isLoggedIn) {
-          print('用户已登录，跳转到首页');
           if (mounted) {
             context.go('/');
           }
           return;
         }
 
-        // 从 SharedPreferences 中获取自动登录尝试状态
-        final prefs = await SharedPreferences.getInstance();
-        _autoLoginTried = prefs.getBool('auto_login_tried') ?? false;
-        print('自动登录尝试状态: $_autoLoginTried');
+        // 检查域名连通性
+        final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
+        if (domainCheckViewModel.isSuccess) {
+          await _tryAutoLogin();
+        }
 
         // 监听域名检查状态
-        print('开始监听域名检查状态');
         ref.listen(domainCheckViewModelProvider, (previous, current) {
-          print('域名检查状态变化:');
-          print('之前状态: ${previous?.isSuccess}');
-          print('当前状态: ${current.isSuccess}');
-          print('检查中: ${current.isChecking}');
-          print('重试次数: ${current.retryCount}');
-
-          if (current.isSuccess && !_autoLoginTried) {
-            print('域名检查成功，准备自动登录');
+          if (current.isSuccess) {
             _tryAutoLogin();
           }
         });
       } catch (e) {
-        print('初始化错误: $e');
         if (mounted) {
           _showErrorSnackbar(
             context,
@@ -79,73 +91,48 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _tryAutoLogin() async {
-    print('开始尝试自动登录');
-    if (_autoLoginTried) {
-      print('已经尝试过自动登录，跳过');
-      return;
-    }
-
     try {
-      print('获取登录视图模型');
       final loginViewModel = ref.read(loginViewModelProvider);
-      print('获取 SharedPreferences 实例');
       final prefs = await SharedPreferences.getInstance();
-      print('获取用户登出状态');
       final loggedOut = prefs.getBool('user_logged_out') ?? false;
 
       // 从 SharedPreferences 中获取保存的凭据
-      print('获取保存的用户凭据');
       final savedUsername = prefs.getString('saved_username') ?? '';
       final savedPassword = prefs.getString('saved_password') ?? '';
       final isRememberMe = prefs.getBool('is_remember_me') ?? true;
-
-      print('自动登录凭据检查:');
-      print('用户名: ${savedUsername.isNotEmpty ? "已保存" : "未保存"}');
-      print('密码: ${savedPassword.isNotEmpty ? "已保存" : "未保存"}');
-      print('记住密码: $isRememberMe');
-      print('已登出: $loggedOut');
 
       // 如果保存了凭据且记住密码被选中
       final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
 
       if (hasSavedCredentials && !loggedOut) {
-        print('开始执行自动登录');
         setState(() {
-          _autoLoginTried = true;
           _autoLoginFailed = false;
+          _autoLoginProgress = 0;
         });
 
-        // 保存自动登录尝试状态
-        print('保存自动登录尝试状态到 SharedPreferences');
-        await prefs.setBool('auto_login_tried', true);
-        print('已保存自动登录尝试状态');
+        _startProgressTimer();
 
         try {
-          // 使用保存的凭据进行登录
-          print('开始调用登录接口');
-          print('用户名长度: ${savedUsername.length}');
-          print('密码长度: ${savedPassword.length}');
+          // 检查网络连接
+          final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
+          if (!domainCheckViewModel.isSuccess) {
+            throw Exception('网络连接未就绪');
+          }
+
           await loginViewModel.login(
             savedUsername,
             savedPassword,
             context,
             ref,
           );
-          print('登录成功');
+
+          _stopProgressTimer();
           if (mounted) {
-            print('准备跳转到首页');
             context.go('/');
           }
-        } catch (e, stackTrace) {
-          print('登录过程出错:');
-          print('错误类型: ${e.runtimeType}');
-          print('错误信息: $e');
-          print('堆栈跟踪:');
-          print(stackTrace);
-          if (!mounted) {
-            print('组件已卸载，无法显示错误提示');
-            return;
-          }
+        } catch (e) {
+          _stopProgressTimer();
+          if (!mounted) return;
           setState(() {
             _autoLoginFailed = true;
           });
@@ -155,21 +142,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Colors.red,
           );
         }
-      } else {
-        print('自动登录条件不满足:');
-        print('hasSavedCredentials: $hasSavedCredentials');
-        print('loggedOut: $loggedOut');
       }
-    } catch (e, stackTrace) {
-      print('自动登录过程出错:');
-      print('错误类型: ${e.runtimeType}');
-      print('错误信息: $e');
-      print('堆栈跟踪:');
-      print(stackTrace);
-      if (!mounted) {
-        print('组件已卸载，无法显示错误提示');
-        return;
-      }
+    } catch (e) {
+      _stopProgressTimer();
+      if (!mounted) return;
       setState(() {
         _autoLoginFailed = true;
       });
@@ -210,22 +186,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      if (_autoLoginTried && loginViewModel.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                      if (loginViewModel.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: _autoLoginProgress / 100,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).primaryColor,
                                 ),
-                                SizedBox(width: 8),
-                                Text('正在自动登录...'),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '正在自动登录... $_autoLoginProgress%',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       if (_autoLoginFailed)
