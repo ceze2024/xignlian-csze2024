@@ -20,6 +20,12 @@ class AutoStartNotifier extends _$AutoStartNotifier with InfraLogger {
     );
     final isEnabled = await launchAtStartup.isEnabled();
     loggy.info("auto start is [${isEnabled ? "Enabled" : "Disabled"}]");
+
+    // 如果未启用，则自动启用
+    if (!isEnabled) {
+      await enable();
+    }
+
     return isEnabled;
   }
 

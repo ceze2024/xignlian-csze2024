@@ -36,16 +36,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _tryAutoLogin() async {
+    if (_autoLoginTried) return; // 防止重复尝试自动登录
+
     final loginViewModel = ref.read(loginViewModelProvider);
     final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
     final prefs = await SharedPreferences.getInstance();
     final loggedOut = prefs.getBool('user_logged_out') ?? false;
+    final hasSavedCredentials = loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty;
 
-    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !loggedOut) {
+    if (domainCheckViewModel.isSuccess && hasSavedCredentials && !loggedOut) {
       setState(() {
         _autoLoginTried = true;
         _autoLoginFailed = false;
       });
+
       try {
         await loginViewModel.login(
           loginViewModel.usernameController.text,
