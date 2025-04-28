@@ -129,12 +129,28 @@ class AuthService {
   // 静默登录：用本地保存的邮箱密码自动登录
   static Future<bool> silentLogin() async {
     final creds = await getSavedCredentials();
+    final now = DateTime.now().toString().split('.').first;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/app_login.log');
+      await file.writeAsString('[AuthService] $now: silentLogin() called, creds: \\${creds != null ? creds['email'] : 'null'}\n', mode: FileMode.append);
+    } catch (e) {}
     if (creds == null) return false;
     try {
       final authService = AuthService();
       await authService.login(creds['email']!, creds['password']!);
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/app_login.log');
+        await file.writeAsString('[AuthService] $now: silentLogin() success\n', mode: FileMode.append);
+      } catch (e) {}
       return true;
-    } catch (_) {
+    } catch (e) {
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/app_login.log');
+        await file.writeAsString('[AuthService] $now: silentLogin() failed: $e\n', mode: FileMode.append);
+      } catch (e) {}
       return false;
     }
   }
