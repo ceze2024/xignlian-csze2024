@@ -11,6 +11,8 @@ import 'package:hiddify/features/panel/xboard/viewmodels/login_viewmodel/login_v
 import 'package:hiddify/features/panel/xboard/views/domain_check_indicator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider((ref) {
   return LoginViewModel(
@@ -28,15 +30,18 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   bool _autoLoginTried = false;
   bool _autoLoginFailed = false;
-  List<String> _logs = [];
 
-  void _addLog(String message) {
-    setState(() {
-      _logs.add('${DateTime.now().toString().split('.').first}: $message');
-      if (_logs.length > 10) {
-        _logs.removeAt(0);
-      }
-    });
+  // 写日志到本地文件
+  Future<void> _writeLog(String message) async {
+    final now = DateTime.now().toString().split('.').first;
+    final logLine = '$now: $message\n';
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/app_login.log');
+      await file.writeAsString(logLine, mode: FileMode.append);
+    } catch (e) {
+      // 忽略日志写入错误
+    }
   }
 
   @override
@@ -51,12 +56,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
 
-    _addLog('自动登录初始化检查:');
-    _addLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
-    _addLog('username: ${loginViewModel.usernameController.text}');
-    _addLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
-    _addLog('_autoLoginTried: $_autoLoginTried');
-    _addLog('isLoggedOut: $isLoggedOut');
+    await _writeLog('自动登录初始化检查:');
+    await _writeLog('domainCheckViewModel.isSuccess: [32m${domainCheckViewModel.isSuccess}[0m');
+    await _writeLog('username: ${loginViewModel.usernameController.text}');
+    await _writeLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
+    await _writeLog('_autoLoginTried: $_autoLoginTried');
+    await _writeLog('isLoggedOut: $isLoggedOut');
 
     // 如果 domainCheckViewModel 已经是成功状态，直接尝试自动登录
     if (domainCheckViewModel.isSuccess && !_autoLoginTried) {
@@ -70,15 +75,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
 
-    _addLog('尝试自动登录:');
-    _addLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
-    _addLog('username: ${loginViewModel.usernameController.text}');
-    _addLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
-    _addLog('_autoLoginTried: $_autoLoginTried');
-    _addLog('isLoggedOut: $isLoggedOut');
+    await _writeLog('尝试自动登录:');
+    await _writeLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
+    await _writeLog('username: ${loginViewModel.usernameController.text}');
+    await _writeLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
+    await _writeLog('_autoLoginTried: $_autoLoginTried');
+    await _writeLog('isLoggedOut: $isLoggedOut');
 
     if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
-      _addLog('满足自动登录条件，开始自动登录');
+      await _writeLog('满足自动登录条件，开始自动登录');
       _autoLoginTried = true;
       if (mounted) {
         setState(() {
@@ -86,21 +91,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         });
       }
       try {
-        _addLog('loginViewModel.login 开始: ${DateTime.now()}');
+        await _writeLog('loginViewModel.login 开始: ${DateTime.now()}');
         await loginViewModel.login(
           loginViewModel.usernameController.text,
           loginViewModel.passwordController.text,
           context as BuildContext,
           ref,
         );
-        _addLog('loginViewModel.login 返回: ${DateTime.now()}');
+        await _writeLog('loginViewModel.login 返回: ${DateTime.now()}');
         if (mounted) {
-          _addLog('跳转主页前: ${DateTime.now()}');
+          await _writeLog('跳转主页前: ${DateTime.now()}');
           context.go('/');
-          _addLog('跳转主页后: ${DateTime.now()}');
+          await _writeLog('跳转主页后: ${DateTime.now()}');
         }
       } catch (e) {
-        _addLog('自动登录失败: $e');
+        await _writeLog('自动登录失败: $e');
         if (mounted) {
           setState(() {
             _autoLoginFailed = true;
@@ -113,7 +118,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
       }
     } else {
-      _addLog('不满足自动登录条件');
+      await _writeLog('不满足自动登录条件');
     }
   }
 
@@ -125,9 +130,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     // 只在 build 方法中监听 domainCheckViewModel 状态变化，确保自动登录只触发一次
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.listen(domainCheckViewModelProvider, (previous, next) {
+      ref.listen(domainCheckViewModelProvider, (previous, next) async {
         if (next.isSuccess && !_autoLoginTried) {
-          _addLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
+          await _writeLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
           _checkAutoLogin();
         }
       });
@@ -157,25 +162,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      // 添加日志显示区域
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        height: 200,
-                        child: ListView.builder(
-                          itemCount: _logs.length,
-                          itemBuilder: (context, index) {
-                            return Text(
-                              _logs[index],
-                              style: const TextStyle(fontSize: 12),
-                            );
-                          },
-                        ),
-                      ),
+                      // 日志显示区域已移除
                       if (_autoLoginTried && loginViewModel.isLoading)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 12),
@@ -278,25 +265,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ElevatedButton(
                           onPressed: domainCheckViewModel.isSuccess
                               ? () async {
-                                  _addLog('点击登录按钮: ${DateTime.now()}');
+                                  await _writeLog('点击登录按钮: ${DateTime.now()}');
                                   final email = loginViewModel.usernameController.text;
                                   final password = loginViewModel.passwordController.text;
                                   try {
-                                    _addLog('loginViewModel.login 开始: ${DateTime.now()}');
+                                    await _writeLog('loginViewModel.login 开始: ${DateTime.now()}');
                                     await loginViewModel.login(
                                       email,
                                       password,
                                       context as BuildContext,
                                       ref,
                                     );
-                                    _addLog('loginViewModel.login 返回: ${DateTime.now()}');
+                                    await _writeLog('loginViewModel.login 返回: ${DateTime.now()}');
                                     if (context.mounted) {
-                                      _addLog('跳转主页前: ${DateTime.now()}');
+                                      await _writeLog('跳转主页前: ${DateTime.now()}');
                                       context.go('/');
-                                      _addLog('跳转主页后: ${DateTime.now()}');
+                                      await _writeLog('跳转主页后: ${DateTime.now()}');
                                     }
                                   } catch (e) {
-                                    _addLog('登录失败: $e');
+                                    await _writeLog('登录失败: $e');
                                     _showErrorSnackbar(
                                       context,
                                       "${t.login.loginErr}: $e",
