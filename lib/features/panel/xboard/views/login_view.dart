@@ -41,8 +41,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return;
       }
 
-      // 尝试自动登录
-      await _tryAutoLogin();
+      // 监听域名检查状态
+      ref.listen(domainCheckViewModelProvider, (previous, current) {
+        if (current.isSuccess && !_autoLoginTried) {
+          _tryAutoLogin();
+        }
+      });
     });
   }
 
@@ -50,7 +54,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_autoLoginTried) return; // 防止重复尝试自动登录
 
     final loginViewModel = ref.read(loginViewModelProvider);
-    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
     final prefs = await SharedPreferences.getInstance();
     final loggedOut = prefs.getBool('user_logged_out') ?? false;
 
@@ -62,7 +65,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // 如果保存了凭据且记住密码被选中
     final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
 
-    if (domainCheckViewModel.isSuccess && hasSavedCredentials && !loggedOut) {
+    if (hasSavedCredentials && !loggedOut) {
       setState(() {
         _autoLoginTried = true;
         _autoLoginFailed = false;
