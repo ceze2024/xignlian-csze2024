@@ -30,8 +30,7 @@ import 'package:hiddify/singbox/service/singbox_service_provider.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-
-final domainInitFailedProvider = StateProvider<bool>((ref) => false);
+import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 
 Future<void> lazyBootstrap(
   WidgetsBinding widgetsBinding,
