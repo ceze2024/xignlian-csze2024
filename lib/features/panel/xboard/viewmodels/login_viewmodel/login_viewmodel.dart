@@ -83,7 +83,9 @@ class LoginViewModel extends ChangeNotifier {
       if (authData != null && token != null) {
         await storeToken(authData!);
         await _saveCredentials();
-
+        // 登录成功后清除 user_logged_out 标志
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('user_logged_out', false);
         // 使用封装好的 Subscription 来更新订阅
         // ignore: use_build_context_synchronously
         await Subscription.updateSubscription(context, ref);
