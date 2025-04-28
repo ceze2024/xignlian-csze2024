@@ -16,6 +16,7 @@ Future<void> logout(BuildContext context, WidgetRef ref) async {
   // 注销时设置 user_logged_out 标志为 true
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('user_logged_out', true);
+  // 不再清除邮箱和密码，保证自动刷新token可用
   // 更新 authProvider 状态为未登录
   ref.read(authProvider.notifier).state = false;
   // 跳转到登录页面

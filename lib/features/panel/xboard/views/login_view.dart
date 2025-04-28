@@ -28,9 +28,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  bool _autoLoginTried = false;
-  bool _autoLoginFailed = false;
-
   // 写日志到本地文件
   Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;
@@ -47,79 +44,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _initializeAutoLogin();
-  }
-
-  Future<void> _initializeAutoLogin() async {
-    final loginViewModel = ref.read(loginViewModelProvider);
-    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
-
-    await _writeLog('自动登录初始化检查:');
-    await _writeLog('domainCheckViewModel.isSuccess: [32m${domainCheckViewModel.isSuccess}[0m');
-    await _writeLog('username: ${loginViewModel.usernameController.text}');
-    await _writeLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
-    await _writeLog('_autoLoginTried: $_autoLoginTried');
-    await _writeLog('isLoggedOut: $isLoggedOut');
-
-    // 如果 domainCheckViewModel 已经是成功状态，直接尝试自动登录
-    if (domainCheckViewModel.isSuccess && !_autoLoginTried) {
-      _checkAutoLogin();
-    }
-  }
-
-  Future<void> _checkAutoLogin() async {
-    final loginViewModel = ref.read(loginViewModelProvider);
-    final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedOut = prefs.getBool('user_logged_out') ?? false;
-
-    await _writeLog('尝试自动登录:');
-    await _writeLog('domainCheckViewModel.isSuccess: ${domainCheckViewModel.isSuccess}');
-    await _writeLog('username: ${loginViewModel.usernameController.text}');
-    await _writeLog('password: ${loginViewModel.passwordController.text.isNotEmpty}');
-    await _writeLog('_autoLoginTried: $_autoLoginTried');
-    await _writeLog('isLoggedOut: $isLoggedOut');
-
-    if (domainCheckViewModel.isSuccess && loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty && !_autoLoginTried && !isLoggedOut) {
-      await _writeLog('满足自动登录条件，开始自动登录');
-      _autoLoginTried = true;
-      if (mounted) {
-        setState(() {
-          _autoLoginFailed = false;
-        });
-      }
-      try {
-        await _writeLog('loginViewModel.login 开始: ${DateTime.now()}');
-        await loginViewModel.login(
-          loginViewModel.usernameController.text,
-          loginViewModel.passwordController.text,
-          context as BuildContext,
-          ref,
-        );
-        await _writeLog('loginViewModel.login 返回: ${DateTime.now()}');
-        if (mounted) {
-          await _writeLog('跳转主页前: ${DateTime.now()}');
-          context.go('/');
-          await _writeLog('跳转主页后: ${DateTime.now()}');
-        }
-      } catch (e) {
-        await _writeLog('自动登录失败: $e');
-        if (mounted) {
-          setState(() {
-            _autoLoginFailed = true;
-          });
-          _showErrorSnackbar(
-            context,
-            "自动登录失败，请手动登录。",
-            Colors.red,
-          );
-        }
-      }
-    } else {
-      await _writeLog('不满足自动登录条件');
-    }
+    // 移除自动登录相关调用
   }
 
   @override
@@ -127,16 +52,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final loginViewModel = ref.watch(loginViewModelProvider);
     final t = ref.watch(translationsProvider);
     final domainCheckViewModel = ref.watch(domainCheckViewModelProvider);
-
-    // 只在 build 方法中监听 domainCheckViewModel 状态变化，确保自动登录只触发一次
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.listen(domainCheckViewModelProvider, (previous, next) async {
-        if (next.isSuccess && !_autoLoginTried) {
-          await _writeLog('domainCheckViewModel 状态变化: ${next.isSuccess}');
-          _checkAutoLogin();
-        }
-      });
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -162,35 +77,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      // 日志显示区域已移除
-                      if (_autoLoginTried && loginViewModel.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                                SizedBox(width: 8),
-                                Text('正在自动登录...'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (_autoLoginFailed)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Center(
-                            child: Text(
-                              '自动登录失败，请手动登录。',
-                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
                       Icon(
                         Icons.person,
                         size: 50,
@@ -265,22 +151,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ElevatedButton(
                           onPressed: domainCheckViewModel.isSuccess
                               ? () async {
-                                  await _writeLog('点击登录按钮: ${DateTime.now()}');
+                                  await _writeLog('点击登录按钮: \\${DateTime.now()}');
                                   final email = loginViewModel.usernameController.text;
                                   final password = loginViewModel.passwordController.text;
                                   try {
-                                    await _writeLog('loginViewModel.login 开始: ${DateTime.now()}');
+                                    await _writeLog('loginViewModel.login 开始: \\${DateTime.now()}');
                                     await loginViewModel.login(
                                       email,
                                       password,
                                       context as BuildContext,
                                       ref,
                                     );
-                                    await _writeLog('loginViewModel.login 返回: ${DateTime.now()}');
+                                    await _writeLog('loginViewModel.login 返回: \\${DateTime.now()}');
                                     if (context.mounted) {
-                                      await _writeLog('跳转主页前: ${DateTime.now()}');
+                                      await _writeLog('跳转主页前: \\${DateTime.now()}');
                                       context.go('/');
-                                      await _writeLog('跳转主页后: ${DateTime.now()}');
+                                      await _writeLog('跳转主页后: \\${DateTime.now()}');
                                     }
                                   } catch (e) {
                                     await _writeLog('登录失败: $e');
