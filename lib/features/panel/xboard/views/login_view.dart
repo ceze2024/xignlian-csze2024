@@ -32,7 +32,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkAutoLogin();
+    // 监听 domainCheckViewModel 的状态变化
+    ref.listen(domainCheckViewModelProvider, (previous, next) {
+      if (next.isSuccess && !_autoLoginTried) {
+        _checkAutoLogin();
+      }
+    });
   }
 
   Future<void> _checkAutoLogin() async {
