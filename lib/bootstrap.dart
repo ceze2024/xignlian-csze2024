@@ -39,8 +39,7 @@ Future<void> lazyBootstrap(
 
   LoggerController.preInit();
   FlutterError.onError = Logger.logFlutterError;
-  WidgetsBinding.instance.platformDispatcher.onError =
-      Logger.logPlatformDispatcherError;
+  WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
   final userService = UserService();
   final stopWatch = Stopwatch()..start();
 
@@ -52,9 +51,9 @@ Future<void> lazyBootstrap(
 // 初始化域名
   try {
     container.read(authProvider.notifier).state = false;
-     print("Initializing domain...");
-     await HttpService.initialize();
-     print("Domain initialized successfully: ${HttpService.baseUrl}");
+    print("Initializing domain...");
+    await HttpService.initialize();
+    print("Domain initialized successfully: ${HttpService.baseUrl}");
   } catch (e) {
     // 如果初始化域名出错，设置为未登录状态
     print("Error during domain initialization: $e");
@@ -105,14 +104,22 @@ Future<void> lazyBootstrap(
     () => container.read(sharedPreferencesProvider.future),
   );
 
-  final enableAnalytics =
-      await container.read(analyticsControllerProvider.future);
+  // 检查是否首次运行，首次运行则自动开启开机启动
+  if (PlatformUtils.isDesktop) {
+    final prefs = container.read(sharedPreferencesProvider).requireValue;
+    const firstRunKey = "auto_start_first_run";
+    final isFirstRun = prefs.getBool(firstRunKey) == null;
+    if (isFirstRun) {
+      await container.read(autoStartNotifierProvider.notifier).enable();
+      await prefs.setBool(firstRunKey, false);
+    }
+  }
+
+  final enableAnalytics = await container.read(analyticsControllerProvider.future);
   if (enableAnalytics) {
     await _init(
       "analytics",
-      () => container
-          .read(analyticsControllerProvider.notifier)
-          .enableAnalytics(),
+      () => container.read(analyticsControllerProvider.notifier).enableAnalytics(),
     );
   }
 
@@ -121,8 +128,7 @@ Future<void> lazyBootstrap(
     () async {
       try {
         await PreferencesMigration(
-          sharedPreferences:
-              container.read(sharedPreferencesProvider).requireValue,
+          sharedPreferences: container.read(sharedPreferencesProvider).requireValue,
         ).migrate();
       } catch (e, stackTrace) {
         Logger.bootstrap.error("preferences migration failed", e, stackTrace);
@@ -142,8 +148,7 @@ Future<void> lazyBootstrap(
     );
 
     final silentStart = container.read(Preferences.silentStart);
-    Logger.bootstrap
-        .debug("silent start [${silentStart ? "Enabled" : "Disabled"}]");
+    Logger.bootstrap.debug("silent start [${silentStart ? "Enabled" : "Disabled"}]");
     if (!silentStart) {
       await container.read(windowNotifierProvider.notifier).open(focus: false);
     } else {
@@ -220,13 +225,10 @@ Future<T> _init<T>(
 }) async {
   final stopWatch = Stopwatch()..start();
   Logger.bootstrap.info("initializing [$name]");
-  Future<T> func() => timeout != null
-      ? initializer().timeout(Duration(milliseconds: timeout))
-      : initializer();
+  Future<T> func() => timeout != null ? initializer().timeout(Duration(milliseconds: timeout)) : initializer();
   try {
     final result = await func();
-    Logger.bootstrap
-        .debug("[$name] initialized in ${stopWatch.elapsedMilliseconds}ms");
+    Logger.bootstrap.debug("[$name] initialized in ${stopWatch.elapsedMilliseconds}ms");
     return result;
   } catch (e, stackTrace) {
     Logger.bootstrap.error("[$name] error initializing", e, stackTrace);
