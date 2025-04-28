@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/features/panel/xboard/services/auth_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
 import 'package:hiddify/features/panel/xboard/viewmodels/login_viewmodel/login_viewmodel.dart';
 import 'package:hiddify/features/panel/xboard/views/domain_check_indicator.dart';
@@ -30,8 +31,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tryAutoLogin();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 检查是否已经登录
+      final isLoggedIn = ref.read(authProvider);
+      if (isLoggedIn) {
+        if (mounted) {
+          context.go('/');
+        }
+        return;
+      }
+
+      // 尝试自动登录
+      await _tryAutoLogin();
     });
   }
 
