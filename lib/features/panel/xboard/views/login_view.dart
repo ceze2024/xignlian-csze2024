@@ -42,7 +42,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final domainCheckViewModel = ref.read(domainCheckViewModelProvider);
     final prefs = await SharedPreferences.getInstance();
     final loggedOut = prefs.getBool('user_logged_out') ?? false;
-    final hasSavedCredentials = loginViewModel.usernameController.text.isNotEmpty && loginViewModel.passwordController.text.isNotEmpty;
+
+    // 从 SharedPreferences 中获取保存的凭据
+    final savedUsername = prefs.getString('saved_username') ?? '';
+    final savedPassword = prefs.getString('saved_password') ?? '';
+    final isRememberMe = prefs.getBool('is_remember_me') ?? true;
+
+    // 如果保存了凭据且记住密码被选中
+    final hasSavedCredentials = savedUsername.isNotEmpty && savedPassword.isNotEmpty && isRememberMe;
 
     if (domainCheckViewModel.isSuccess && hasSavedCredentials && !loggedOut) {
       setState(() {
@@ -51,9 +58,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       });
 
       try {
+        // 使用保存的凭据进行登录
         await loginViewModel.login(
-          loginViewModel.usernameController.text,
-          loginViewModel.passwordController.text,
+          savedUsername,
+          savedPassword,
           context,
           ref,
         );
