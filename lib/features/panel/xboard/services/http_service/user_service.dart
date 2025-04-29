@@ -48,15 +48,14 @@ class UserService {
     await _writeLog('validateToken called, token: $token');
     try {
       final result = await _httpService.getRequest(
-        "/api/v1/user/getSubscribe",
+        "/api/v1/user/info",
         headers: {
           'Authorization': token,
-          'X-Token-Type': 'auth_data',
+          'X-Token-Type': 'login_token',
         },
       );
-      final resultBool = result != null && result['status'] == 'success';
-      await _writeLog('validateToken result: $resultBool');
-      return resultBool;
+      await _writeLog('validateToken success');
+      return result['data'] != null;
     } catch (e) {
       await _writeLog('validateToken error: $e');
       return false;

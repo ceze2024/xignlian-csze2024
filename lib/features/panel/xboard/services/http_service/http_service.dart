@@ -63,11 +63,13 @@ class HttpService {
       while (_isRefreshingToken) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      final token = await getLoginToken();
-      if (token != null) {
+      final loginToken = await getLoginToken();
+      final authData = await getToken();
+      if (loginToken != null && authData != null) {
         return {
-          'Authorization': token,
+          'Authorization': loginToken,
           'X-Token-Type': 'login_token',
+          'Auth-Data': authData,
         };
       }
       return null;
@@ -78,11 +80,13 @@ class HttpService {
       if (_silentLogin == null) {
         await _writeLog('No silent login callback provided, trying to get saved token');
         // 尝试获取已保存的 token
-        final token = await getLoginToken();
-        if (token != null) {
+        final loginToken = await getLoginToken();
+        final authData = await getToken();
+        if (loginToken != null && authData != null) {
           return {
-            'Authorization': token,
+            'Authorization': loginToken,
             'X-Token-Type': 'login_token',
+            'Auth-Data': authData,
           };
         }
         await _writeLog('No saved token found');
@@ -91,12 +95,14 @@ class HttpService {
 
       final refreshed = await _silentLogin!();
       if (refreshed) {
-        final newToken = await getLoginToken();
-        if (newToken != null) {
-          await _writeLog('Silent login success, got new token');
+        final loginToken = await getLoginToken();
+        final authData = await getToken();
+        if (loginToken != null && authData != null) {
+          await _writeLog('Silent login success, got new tokens');
           return {
-            'Authorization': newToken,
+            'Authorization': loginToken,
             'X-Token-Type': 'login_token',
+            'Auth-Data': authData,
           };
         }
       }

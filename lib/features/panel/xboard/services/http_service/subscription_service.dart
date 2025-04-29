@@ -1,6 +1,7 @@
 // services/subscription_service.dart
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
+import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
@@ -21,10 +22,16 @@ class SubscriptionService {
   Future<String?> getSubscriptionLink(String accessToken) async {
     await _writeLog('getSubscriptionLink called, token: $accessToken');
     try {
+      final authData = await getToken(); // 使用 auth_data token
+      if (authData == null) {
+        await _writeLog('No auth_data token found');
+        return null;
+      }
+
       final result = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
         headers: {
-          'Authorization': accessToken,
+          'Authorization': authData,
           'X-Token-Type': 'auth_data',
         },
       );
