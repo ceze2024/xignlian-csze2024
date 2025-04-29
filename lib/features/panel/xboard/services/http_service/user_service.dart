@@ -9,65 +9,41 @@ import 'package:path_provider/path_provider.dart';
 class UserService {
   final HttpService _httpService = HttpService();
 
-  Future<UserInfo?> fetchUserInfo(String accessToken) async {
+  Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;
+    final logLine = '[UserService] $now: $message\n';
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/app_login.log');
-      await file.writeAsString('[UserService] $now: fetchUserInfo called, token: $accessToken\n', mode: FileMode.append);
+      await file.writeAsString(logLine, mode: FileMode.append);
     } catch (e) {}
+  }
+
+  Future<UserInfo?> fetchUserInfo(String accessToken) async {
+    await _writeLog('fetchUserInfo called, token: $accessToken');
     try {
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
-        headers: {'Authorization': accessToken},
+        headers: {
+          'Authorization': accessToken,
+          'X-Token-Type': 'login_token',
+        },
       );
       if (result.containsKey("data")) {
         final data = result["data"];
+        await _writeLog('fetchUserInfo success');
         return UserInfo.fromJson(data as Map<String, dynamic>);
       }
+      await _writeLog('fetchUserInfo failed: no data in response');
       throw Exception("Failed to retrieve user info");
     } catch (e) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[UserService] $now: fetchUserInfo token失效或异常: $e\n', mode: FileMode.append);
-      } catch (e) {}
-      // token失效时自动静默刷新token并重试一次
-      final refreshed = await AuthService.silentLogin();
-      if (refreshed) {
-        final newToken = await getToken();
-        if (newToken != null) {
-          try {
-            final dir = await getApplicationDocumentsDirectory();
-            final file = File('${dir.path}/app_login.log');
-            await file.writeAsString('[UserService] $now: fetchUserInfo silentLogin成功, retry with newToken\n', mode: FileMode.append);
-          } catch (e) {}
-          final result = await _httpService.getRequest(
-            "/api/v1/user/info",
-            headers: {'Authorization': newToken},
-          );
-          if (result.containsKey("data")) {
-            final data = result["data"];
-            return UserInfo.fromJson(data as Map<String, dynamic>);
-          }
-        }
-      }
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[UserService] $now: fetchUserInfo silentLogin失败或重试失败\n', mode: FileMode.append);
-      } catch (e) {}
+      await _writeLog('fetchUserInfo error: $e');
       rethrow;
     }
   }
 
   Future<bool> validateToken(String token) async {
-    final now = DateTime.now().toString().split('.').first;
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/app_login.log');
-      await file.writeAsString('[UserService] $now: validateToken called, token: $token\n', mode: FileMode.append);
-    } catch (e) {}
+    await _writeLog('validateToken called, token: $token');
     try {
       final response = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
@@ -77,18 +53,10 @@ class UserService {
         },
       );
       final result = response['status'] == 'success';
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[UserService] $now: validateToken result: $result\n', mode: FileMode.append);
-      } catch (e) {}
+      await _writeLog('validateToken result: $result');
       return result;
     } catch (e) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[UserService] $now: validateToken error: $e\n', mode: FileMode.append);
-      } catch (e) {}
+      await _writeLog('validateToken error: $e');
       return false;
     }
   }

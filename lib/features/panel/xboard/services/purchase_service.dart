@@ -13,13 +13,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class PurchaseService {
   Future<List<Plan>> fetchPlanData() async {
-    final accessToken = await getToken();
-    if (accessToken == null) {
+    final loginToken = await getLoginToken();
+    if (loginToken == null) {
       print("No access token found.");
       return [];
     }
 
-    return await PlanService().fetchPlanData(accessToken);
+    return await PlanService().fetchPlanData(loginToken);
   }
 
   Future<void> addSubscription(
@@ -49,7 +49,7 @@ class PurchaseService {
   Future<void> openPurchasePage() async {
     try {
       final domain = await DomainService.fetchValidDomain();
-      final token = await getToken();
+      final token = await getLoginToken();
       if (token == null) {
         throw Exception('未登录，请先登录');
       }
