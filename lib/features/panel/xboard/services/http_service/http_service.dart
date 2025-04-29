@@ -11,12 +11,19 @@ typedef SilentLoginCallback = Future<bool> Function();
 
 class HttpService {
   static String baseUrl = ''; // 替换为你的实际基础 URL
-  final SilentLoginCallback _silentLogin;
+  static HttpService? _instance;
+  final SilentLoginCallback? _silentLogin;
 
-  HttpService(this._silentLogin);
+  HttpService._({SilentLoginCallback? silentLogin}) : _silentLogin = silentLogin;
+
+  static HttpService get instance => _instance ??= HttpService._();
+
+  static void initialize({SilentLoginCallback? silentLogin}) {
+    _instance = HttpService._(silentLogin: silentLogin);
+  }
 
   // 初始化服务并设置动态域名
-  static Future<void> initialize() async {
+  static Future<void> initializeDomain() async {
     baseUrl = await DomainService.fetchValidDomain();
   }
 
@@ -33,7 +40,12 @@ class HttpService {
   // 处理 token 过期的统一方法
   Future<Map<String, String>?> _handleTokenExpired() async {
     await _writeLog('Token expired, trying silent login');
-    final refreshed = await _silentLogin();
+    if (_silentLogin == null) {
+      await _writeLog('No silent login callback provided');
+      return null;
+    }
+
+    final refreshed = await _silentLogin!();
     if (refreshed) {
       final newToken = await getLoginToken();
       if (newToken != null) {
