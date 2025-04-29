@@ -13,10 +13,9 @@ final authProvider = StateProvider<bool>((ref) {
 Future<void> logout(BuildContext context, WidgetRef ref) async {
   // 清除存储的 token
   await deleteToken();
-  // 设置user_logged_out标志为true
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('user_logged_out', true);
-  // 不再清除邮箱和密码，保证自动刷新token可用
+  // 同时清除login token
+  await clearTokens();
+  // 不保存登出标志，避免启动问题
   // 更新 authProvider 状态为未登录
   ref.read(authProvider.notifier).state = false;
   // 跳转到登录页面
