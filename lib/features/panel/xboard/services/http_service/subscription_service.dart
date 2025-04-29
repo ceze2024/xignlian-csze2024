@@ -81,8 +81,9 @@ class SubscriptionService {
 
       // 处理未登录或登录过期的情况
       if (result is Map<String, dynamic> && result.containsKey('message') && (result['message'].toString().contains('未登录') || result['message'].toString().contains('过期'))) {
-        await _writeLog('Token expired or invalid, clearing stored tokens');
-        await clearTokens(); // 清除所有存储的 token
+        await _writeLog('Token expired or invalid, but not clearing tokens to allow re-login');
+        // 不清除所有存储的token，让用户能够在UI中看到登录失效，并重新登录
+        // await clearTokens(); // 注释掉自动清除token的代码
         return null;
       }
 
@@ -149,8 +150,9 @@ class SubscriptionService {
 
       // 处理未登录或登录过期的情况
       if (result is Map<String, dynamic> && result.containsKey('message') && (result['message'].toString().contains('未登录') || result['message'].toString().contains('过期'))) {
-        await _writeLog('Token expired or invalid, clearing stored tokens');
-        await clearTokens(); // 清除所有存储的 token
+        await _writeLog('Token expired or invalid, but not clearing tokens to allow re-login');
+        // 不清除所有存储的token，让用户能够在UI中看到登录失效，并重新登录
+        // await clearTokens(); // 注释掉自动清除token的代码
         return null;
       }
 

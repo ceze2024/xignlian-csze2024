@@ -89,6 +89,7 @@ Future<void> lazyBootstrap(
         await _writeLog('Token validation result: $isValid');
       } catch (e, stackTrace) {
         await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
+        // 即使验证失败也不清除token，允许用户在主界面中重新登录
         isValid = false;
       }
 
@@ -127,7 +128,7 @@ Future<void> lazyBootstrap(
         }
       } else {
         container.read(authProvider.notifier).state = false;
-        await _writeLog('Token is invalid, setting user to not logged in');
+        await _writeLog('Token is invalid, setting user to not logged in but preserving token');
       }
     } else {
       container.read(authProvider.notifier).state = false;

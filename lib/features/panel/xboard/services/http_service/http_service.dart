@@ -79,7 +79,7 @@ class HttpService {
     try {
       if (_silentLogin == null) {
         await _writeLog('No silent login callback provided, trying to get saved token');
-        // 尝试获取已保存的 token
+        // 尝试获取已保存的 token，但不清除它们
         final loginToken = await getLoginToken();
         final authData = await getToken();
         if (loginToken != null && authData != null) {

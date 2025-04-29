@@ -50,6 +50,7 @@ class UserService {
       final authData = await getToken(); // 获取auth_data token
       if (authData == null) {
         await _writeLog('No auth_data token found');
+        // 不清除token，让用户在启动时能继续尝试登录
         return false;
       }
 
@@ -64,6 +65,7 @@ class UserService {
       return result['data'] != null;
     } catch (e) {
       await _writeLog('validateToken error: $e');
+      // 捕获到异常时不清除token，让用户可以在下次启动时再次尝试
       return false;
     }
   }
