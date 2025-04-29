@@ -14,14 +14,21 @@ Future<void> _writeLog(String message) async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/app_login.log');
     await file.writeAsString(logLine, mode: FileMode.append);
-  } catch (e) {}
+  } catch (e) {
+    debugPrint('Error writing log: $e');
+  }
 }
 
 Future<void> storeToken(String? token) async {
   if (token == null) return;
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_authDataKey, token);
-  await _writeLog('Stored auth_data token: $token');
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_authDataKey, token);
+    await _writeLog('Stored auth_data token: $token');
+  } catch (e) {
+    await _writeLog('Error storing auth_data token: $e');
+    rethrow;
+  }
 }
 
 Future<String?> getToken() async {
@@ -32,7 +39,7 @@ Future<String?> getToken() async {
     return token;
   } catch (e) {
     await _writeLog('Error getting auth_data token: $e');
-    return null;
+    rethrow;
   }
 }
 
@@ -44,9 +51,14 @@ Future<void> deleteToken() async {
 
 Future<void> storeLoginToken(String? token) async {
   if (token == null) return;
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_loginTokenKey, token);
-  await _writeLog('Stored login_token: $token');
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_loginTokenKey, token);
+    await _writeLog('Stored login_token: $token');
+  } catch (e) {
+    await _writeLog('Error storing login_token: $e');
+    rethrow;
+  }
 }
 
 Future<String?> getLoginToken() async {
@@ -57,18 +69,23 @@ Future<String?> getLoginToken() async {
     return token;
   } catch (e) {
     await _writeLog('Error getting login_token: $e');
-    return null;
+    rethrow;
   }
 }
 
 Future<Map<String, String>?> getSavedCredentials() async {
-  final prefs = await SharedPreferences.getInstance();
-  final email = prefs.getString('saved_username');
-  final password = prefs.getString('saved_password');
-  if (email != null && password != null) {
-    return {'email': email, 'password': password};
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('saved_username');
+    final password = prefs.getString('saved_password');
+    if (email != null && password != null) {
+      return {'email': email, 'password': password};
+    }
+    return null;
+  } catch (e) {
+    await _writeLog('Error getting saved credentials: $e');
+    rethrow;
   }
-  return null;
 }
 
 Future<void> saveToken(String token) async {
@@ -99,5 +116,6 @@ Future<void> clearTokens() async {
     await _writeLog('Cleared all tokens');
   } catch (e) {
     await _writeLog('Error clearing tokens: $e');
+    rethrow;
   }
 }
