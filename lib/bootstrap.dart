@@ -41,7 +41,9 @@ Future<void> _writeLog(String message) async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/app_login.log');
     await file.writeAsString(logLine, mode: FileMode.append);
-  } catch (e) {}
+  } catch (e) {
+    print('Failed to write log: $e');
+  }
 }
 
 Future<void> lazyBootstrap(
@@ -60,6 +62,24 @@ Future<void> lazyBootstrap(
       environmentProvider.overrideWithValue(env),
     ],
   );
+
+  // 初始化基础组件
+  await _init(
+    "directories",
+    () => container.read(appDirectoriesProvider.future),
+  );
+  LoggerController.init(container.read(logPathResolverProvider).appFile().path);
+
+  final appInfo = await _init(
+    "app info",
+    () => container.read(appInfoProvider.future),
+  );
+  await _init(
+    "preferences",
+    () => container.read(sharedPreferencesProvider.future),
+  );
+
+  // 初始化域名和认证
   bool domainInitFailed = false;
   UserService? userService;
   try {
@@ -76,83 +96,34 @@ Future<void> lazyBootstrap(
 
   container.read(domainInitFailedProvider.notifier).state = domainInitFailed;
 
-  try {
-    final loginToken = await getLoginToken();
-    final token = loginToken ?? await getToken();
-    await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
+  // 处理认证
+  if (!domainInitFailed && userService != null) {
+    try {
+      final loginToken = await getLoginToken();
+      final token = loginToken ?? await getToken();
+      await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
 
-    if (token != null && userService != null) {
-      await _writeLog('Validating token...');
-      bool isValid = false;
-      try {
-        isValid = await userService.validateToken(token);
-        await _writeLog('Token validation result: $isValid');
-      } catch (e, stackTrace) {
-        await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
-        // 即使验证失败也不清除token，允许用户在主界面中重新登录
-        isValid = false;
-      }
-
-      if (isValid) {
-        container.read(authProvider.notifier).state = true;
-        await _writeLog('User is logged in, preparing to runApp(App)');
+      if (token != null) {
+        await _writeLog('Validating token...');
+        bool isValid = false;
         try {
-          runApp(
-            ProviderScope(
-              parent: container,
-              child: SentryUserInteractionWidget(
-                child: Builder(
-                  builder: (context) {
-                    try {
-                      return const App();
-                    } catch (e, stackTrace) {
-                      _writeLog('Error creating App widget: $e\nStackTrace: $stackTrace');
-                      return MaterialApp(
-                        home: Scaffold(
-                          body: Center(
-                            child: Text('应用程序初始化失败，请检查日志'),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ),
-          );
-          await _writeLog('runApp(App) finished successfully');
-          return;
+          isValid = await userService.validateToken(token);
+          await _writeLog('Token validation result: $isValid');
         } catch (e, stackTrace) {
-          await _writeLog('Critical error during runApp: $e\nStackTrace: $stackTrace');
-          throw e;
+          await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
+          isValid = false;
         }
+
+        container.read(authProvider.notifier).state = isValid;
       } else {
+        await _writeLog('No token found');
         container.read(authProvider.notifier).state = false;
-        await _writeLog('Token is invalid, setting user to not logged in but preserving token');
       }
-    } else {
+    } catch (e, stackTrace) {
+      await _writeLog('Error during authentication process: $e\nStackTrace: $stackTrace');
       container.read(authProvider.notifier).state = false;
-      await _writeLog('No token found, setting user to not logged in');
     }
-  } catch (e, stackTrace) {
-    await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
-    container.read(authProvider.notifier).state = false;
   }
-
-  await _init(
-    "directories",
-    () => container.read(appDirectoriesProvider.future),
-  );
-  LoggerController.init(container.read(logPathResolverProvider).appFile().path);
-
-  final appInfo = await _init(
-    "app info",
-    () => container.read(appInfoProvider.future),
-  );
-  await _init(
-    "preferences",
-    () => container.read(sharedPreferencesProvider.future),
-  );
 
   // 检查是否首次运行，首次运行则自动开启开机启动
   if (PlatformUtils.isDesktop) {
@@ -212,8 +183,7 @@ Future<void> lazyBootstrap(
         await _writeLog('Error opening window: $e\nStackTrace: $stack');
       }
     } else {
-      await _writeLog('Silent start enabled, window will remain hidden and accessible via tray');
-      Logger.bootstrap.debug("silent start, remain hidden accessible via tray");
+      await _writeLog('Silent start enabled, window will remain hidden');
     }
 
     await _writeLog('Initializing auto start service');
@@ -222,6 +192,7 @@ Future<void> lazyBootstrap(
       () => container.read(autoStartNotifierProvider.future),
     );
   }
+
   await _init(
     "logs repository",
     () => container.read(logRepositoryProvider.future),
@@ -249,36 +220,36 @@ Future<void> lazyBootstrap(
     "sing-box",
     () => container.read(singboxServiceProvider).init(),
   );
-  if (PlatformUtils.isDesktop) {
-    await _safeInit(
-      "system tray",
-      () => container.read(systemTrayNotifierProvider.future),
-      timeout: 1000,
-    );
-  }
 
-  if (Platform.isAndroid) {
-    await _safeInit(
-      "android display mode",
-      () async {
-        await FlutterDisplayMode.setHighRefreshRate();
-      },
-    );
-  }
-
-  Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
-  stopWatch.stop();
-
+  // 启动应用
   runApp(
     ProviderScope(
       parent: container,
       child: SentryUserInteractionWidget(
-        child: const App(),
+        child: Builder(
+          builder: (context) {
+            try {
+              return const App();
+            } catch (e, stackTrace) {
+              _writeLog('Error creating App widget: $e\nStackTrace: $stackTrace');
+              return MaterialApp(
+                home: Scaffold(
+                  body: Center(
+                    child: Text('应用程序初始化失败，请检查日志'),
+                  ),
+                ),
+              );
+            }
+          },
+        ),
       ),
     ),
   );
 
+  await _writeLog('Application started successfully');
   FlutterNativeSplash.remove();
+  stopWatch.stop();
+  Logger.bootstrap.info("bootstrap completed in ${stopWatch.elapsedMilliseconds}ms");
 }
 
 Future<T> _init<T>(
