@@ -49,9 +49,9 @@ class SubscriptionService {
   }
 
   // 获取订阅链接的方法
-  Future<String?> getSubscriptionLink() async {
+  Future<String?> getSubscriptionLink(String accessToken) async {
     return _retryOperation(() async {
-      await _writeLog('getSubscriptionLink called');
+      await _writeLog('getSubscriptionLink called with token: $accessToken');
       final authData = await getToken();
       if (authData == null || authData.isEmpty) {
         await _writeLog('No valid auth_data token found');
@@ -117,9 +117,9 @@ class SubscriptionService {
   }
 
   // 重置订阅链接的方法
-  Future<String?> resetSubscriptionLink() async {
+  Future<String?> resetSubscriptionLink(String accessToken) async {
     return _retryOperation(() async {
-      await _writeLog('resetSubscriptionLink called');
+      await _writeLog('resetSubscriptionLink called with token: $accessToken');
       final authData = await getToken();
       if (authData == null || authData.isEmpty) {
         await _writeLog('No valid auth_data token found');
