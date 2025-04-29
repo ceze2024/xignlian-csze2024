@@ -47,11 +47,17 @@ class UserService {
   Future<bool> validateToken(String token) async {
     await _writeLog('validateToken called, token: $token');
     try {
+      final authData = await getToken(); // 获取auth_data token
+      if (authData == null) {
+        await _writeLog('No auth_data token found');
+        return false;
+      }
+
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
         headers: {
-          'Authorization': token,
-          'X-Token-Type': 'login_token',
+          'Authorization': authData,
+          'X-Token-Type': 'auth_data',
         },
       );
       await _writeLog('validateToken success');

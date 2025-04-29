@@ -22,7 +22,7 @@ class SubscriptionService {
   Future<String?> getSubscriptionLink(String accessToken) async {
     await _writeLog('getSubscriptionLink called, token: $accessToken');
     try {
-      final authData = await getToken(); // 使用 auth_data token
+      final authData = await getToken();
       if (authData == null) {
         await _writeLog('No auth_data token found');
         return null;
@@ -41,19 +41,43 @@ class SubscriptionService {
         return null;
       }
 
+      await _writeLog('API response: ${result.toString()}');
+
       if (result['status'] != 'success') {
-        await _writeLog('getSubscriptionLink failed: ${result['message'] ?? '未知错误'}');
+        final message = result['message'] ?? '未知错误';
+        await _writeLog('getSubscriptionLink failed: $message');
         return null;
       }
 
-      if (result.containsKey("data")) {
-        final data = result["data"];
-        if (data is Map<String, dynamic> && data.containsKey("subscribe_url")) {
-          await _writeLog('getSubscriptionLink success');
-          return data["subscribe_url"] as String?;
-        }
+      if (!result.containsKey("data")) {
+        await _writeLog('getSubscriptionLink failed: no data field in response');
+        return null;
       }
-      await _writeLog('getSubscriptionLink failed: invalid response format');
+
+      final data = result["data"];
+      if (data == null) {
+        await _writeLog('getSubscriptionLink failed: data field is null');
+        return null;
+      }
+
+      if (data is Map<String, dynamic>) {
+        if (!data.containsKey("subscribe_url")) {
+          await _writeLog('getSubscriptionLink failed: no subscribe_url field in data');
+          return null;
+        }
+        final subscribeUrl = data["subscribe_url"];
+        if (subscribeUrl == null) {
+          await _writeLog('getSubscriptionLink failed: subscribe_url is null');
+          return null;
+        }
+        await _writeLog('getSubscriptionLink success: $subscribeUrl');
+        return subscribeUrl as String;
+      } else if (data is String) {
+        await _writeLog('getSubscriptionLink success: $data');
+        return data;
+      }
+
+      await _writeLog('getSubscriptionLink failed: unexpected data format');
       return null;
     } catch (e) {
       await _writeLog('getSubscriptionLink error: $e');
