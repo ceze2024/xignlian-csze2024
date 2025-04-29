@@ -1,6 +1,7 @@
 // services/auth_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/domain_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,7 +12,7 @@ class AuthService {
   late final HttpService _httpService;
 
   AuthService() {
-    _httpService = HttpService(silentLogin);
+    _httpService = HttpServiceProvider.instance;
   }
 
   // 写日志到本地文件
@@ -133,28 +134,14 @@ class AuthService {
 
   // 静默登录：用本地保存的邮箱密码自动登录
   Future<bool> silentLogin() async {
-    final creds = await getSavedCredentials();
-    final now = DateTime.now().toString().split('.').first;
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/app_login.log');
-      await file.writeAsString('[AuthService] $now: silentLogin() called, creds: ${creds != null ? creds['email'] : 'null'}\n', mode: FileMode.append);
-    } catch (e) {}
-    if (creds == null) return false;
-    try {
-      await login(creds['email']!, creds['password']!);
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[AuthService] $now: silentLogin() success\n', mode: FileMode.append);
-      } catch (e) {}
-      return true;
+      final creds = await getSavedCredentials();
+      if (creds != null) {
+        final result = await login(creds['email']!, creds['password']!);
+        return result != null;
+      }
+      return false;
     } catch (e) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/app_login.log');
-        await file.writeAsString('[AuthService] $now: silentLogin() failed: $e\n', mode: FileMode.append);
-      } catch (e) {}
       return false;
     }
   }

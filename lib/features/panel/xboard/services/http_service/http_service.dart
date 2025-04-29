@@ -10,19 +10,23 @@ import 'package:path_provider/path_provider.dart';
 typedef SilentLoginCallback = Future<bool> Function();
 
 class HttpService {
-  static String baseUrl = ''; // 替换为你的实际基础 URL
+  static String baseUrl = '';
   static HttpService? _instance;
   final SilentLoginCallback? _silentLogin;
+  bool _isRefreshingToken = false;
 
   HttpService._({SilentLoginCallback? silentLogin}) : _silentLogin = silentLogin;
 
-  static HttpService get instance => _instance ??= HttpService._();
-
-  static void initialize({SilentLoginCallback? silentLogin}) {
-    _instance = HttpService._(silentLogin: silentLogin);
+  static HttpService get instance {
+    _instance ??= HttpService._();
+    return _instance!;
   }
 
-  // 初始化服务并设置动态域名
+  static Future<void> initialize({SilentLoginCallback? silentLogin}) async {
+    _instance = HttpService._(silentLogin: silentLogin);
+    await initializeDomain();
+  }
+
   static Future<void> initializeDomain() async {
     baseUrl = await DomainService.fetchValidDomain();
   }
@@ -37,27 +41,61 @@ class HttpService {
     } catch (e) {}
   }
 
+  bool _isTokenExpiredResponse(http.Response response) {
+    if (response.statusCode == 401) return true;
+    try {
+      final body = json.decode(response.body) as Map<String, dynamic>;
+      final message = body['message']?.toString().toLowerCase() ?? '';
+      return message.contains('未登录') || message.contains('登陆已过期') || message.contains('token') && message.contains('过期');
+    } catch (_) {
+      return false;
+    }
+  }
+
   // 处理 token 过期的统一方法
   Future<Map<String, String>?> _handleTokenExpired() async {
     await _writeLog('Token expired, trying silent login');
-    if (_silentLogin == null) {
-      await _writeLog('No silent login callback provided');
-      return null;
-    }
 
-    final refreshed = await _silentLogin!();
-    if (refreshed) {
-      final newToken = await getLoginToken();
-      if (newToken != null) {
-        await _writeLog('Silent login success, got new token');
+    // 防止多个请求同时刷新 token
+    if (_isRefreshingToken) {
+      await _writeLog('Token refresh already in progress, waiting...');
+      // 等待现有的刷新完成
+      while (_isRefreshingToken) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      final token = await getLoginToken();
+      if (token != null) {
         return {
-          'Authorization': newToken,
+          'Authorization': token,
           'X-Token-Type': 'login_token',
         };
       }
+      return null;
     }
-    await _writeLog('Silent login failed');
-    return null;
+
+    _isRefreshingToken = true;
+    try {
+      if (_silentLogin == null) {
+        await _writeLog('No silent login callback provided');
+        return null;
+      }
+
+      final refreshed = await _silentLogin!();
+      if (refreshed) {
+        final newToken = await getLoginToken();
+        if (newToken != null) {
+          await _writeLog('Silent login success, got new token');
+          return {
+            'Authorization': newToken,
+            'X-Token-Type': 'login_token',
+          };
+        }
+      }
+      await _writeLog('Silent login failed');
+      return null;
+    } finally {
+      _isRefreshingToken = false;
+    }
   }
 
   // 统一的 GET 请求方法
@@ -74,7 +112,7 @@ class HttpService {
             url,
             headers: headers,
           )
-          .timeout(const Duration(seconds: 20)); // 设置超时时间
+          .timeout(const Duration(seconds: 20));
 
       if (kDebugMode) {
         print("GET $baseUrl$endpoint response: ${response.body}");
@@ -86,7 +124,7 @@ class HttpService {
       }
 
       // 处理 token 过期情况
-      if (response.statusCode == 401 || (json.decode(response.body) as Map<String, dynamic>)['message']?.toString().contains('未登录或登陆已过期') == true) {
+      if (_isTokenExpiredResponse(response)) {
         await _writeLog('Token expired detected in GET request');
         final newHeaders = await _handleTokenExpired();
         if (newHeaders != null) {
@@ -116,12 +154,12 @@ class HttpService {
     }
   }
 
-  // 统一的 POST 请求方法，增加 requiresHeaders 开关
+  // 统一的 POST 请求方法
   Future<Map<String, dynamic>> postRequest(
     String endpoint,
     Map<String, dynamic> body, {
     Map<String, String>? headers,
-    bool requiresHeaders = true, // 新增开关参数，默认需要 headers
+    bool requiresHeaders = true,
   }) async {
     final url = Uri.parse('$baseUrl$endpoint');
     await _writeLog('POST request to: $endpoint');
@@ -133,7 +171,7 @@ class HttpService {
             headers: requiresHeaders ? (headers ?? {'Content-Type': 'application/json'}) : null,
             body: json.encode(body),
           )
-          .timeout(const Duration(seconds: 20)); // 设置超时时间
+          .timeout(const Duration(seconds: 20));
 
       if (kDebugMode) {
         print("POST $baseUrl$endpoint response: ${response.body}");
@@ -145,12 +183,12 @@ class HttpService {
       }
 
       // 处理 token 过期情况
-      if (response.statusCode == 401 || (json.decode(response.body) as Map<String, dynamic>)['message']?.toString().contains('未登录或登陆已过期') == true) {
+      if (_isTokenExpiredResponse(response)) {
         await _writeLog('Token expired detected in POST request');
         final newHeaders = await _handleTokenExpired();
         if (newHeaders != null) {
           await _writeLog('Retrying POST request with new token');
-          final retryHeaders = requiresHeaders ? {...(newHeaders), 'Content-Type': 'application/json'} : null;
+          final retryHeaders = requiresHeaders ? {...newHeaders, 'Content-Type': 'application/json'} : null;
 
           final retryResponse = await http
               .post(

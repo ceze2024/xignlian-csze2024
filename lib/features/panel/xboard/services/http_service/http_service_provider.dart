@@ -7,7 +7,8 @@ class HttpServiceProvider {
 
   static void initialize() {
     _authService = AuthService();
-    _httpService = HttpService(_authService.silentLogin);
+    HttpService.initialize(silentLogin: _authService.silentLogin);
+    _httpService = HttpService.instance;
   }
 
   static HttpService get instance {

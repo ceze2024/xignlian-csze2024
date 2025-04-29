@@ -1,10 +1,11 @@
 // services/subscription_service.dart
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class SubscriptionService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 
   Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;

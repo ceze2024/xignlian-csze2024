@@ -1,11 +1,12 @@
 // services/order_service.dart
 import 'package:hiddify/features/panel/xboard/models/order_model.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class OrderService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 
   Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;

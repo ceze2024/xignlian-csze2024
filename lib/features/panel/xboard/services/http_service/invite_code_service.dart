@@ -1,9 +1,10 @@
 // services/invite_service.dart
 import 'package:hiddify/features/panel/xboard/models/invite_code_model.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 
 class InviteCodeService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 
   // 生成邀请码的方法
   Future<bool> generateInviteCode(String accessToken) async {

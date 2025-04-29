@@ -1,12 +1,13 @@
 // services/payment_service.dart
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/domain_service.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class PaymentService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 
   Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;

@@ -1,9 +1,10 @@
 // services/plan_service.dart
 import 'package:hiddify/features/panel/xboard/models/plan_model.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 
 class PlanService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 
   Future<List<Plan>> fetchPlanData(String accessToken) async {
     final result = await _httpService.getRequest(

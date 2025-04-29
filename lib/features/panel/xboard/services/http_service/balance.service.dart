@@ -1,7 +1,8 @@
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 
 class BalanceService {
-  final HttpService _httpService = HttpService();
+  final HttpService _httpService = HttpServiceProvider.instance;
 // 划转佣金到余额的方法
   Future<bool> transferCommission(
     String accessToken,
