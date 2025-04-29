@@ -2,20 +2,27 @@ import 'package:hiddify/features/panel/xboard/services/http_service/auth_service
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
 
 class HttpServiceProvider {
-  static late final AuthService _authService;
-  static late final HttpService _httpService;
+  static AuthService? _authService;
+  static HttpService? _httpService;
 
-  static void initialize() async {
+  static Future<void> initialize() async {
     await HttpService.initializeDomain();
     _authService = AuthService();
+    await HttpService.initialize(silentLogin: _authService!.silentLogin);
     _httpService = HttpService.instance;
   }
 
   static HttpService get instance {
-    return _httpService;
+    if (_httpService == null) {
+      throw Exception('HttpServiceProvider not initialized');
+    }
+    return _httpService!;
   }
 
   static AuthService get auth {
-    return _authService;
+    if (_authService == null) {
+      throw Exception('HttpServiceProvider not initialized');
+    }
+    return _authService!;
   }
 }

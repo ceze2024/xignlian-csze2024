@@ -76,7 +76,16 @@ class HttpService {
     _isRefreshingToken = true;
     try {
       if (_silentLogin == null) {
-        await _writeLog('No silent login callback provided');
+        await _writeLog('No silent login callback provided, trying to get saved token');
+        // 尝试获取已保存的 token
+        final token = await getLoginToken();
+        if (token != null) {
+          return {
+            'Authorization': token,
+            'X-Token-Type': 'login_token',
+          };
+        }
+        await _writeLog('No saved token found');
         return null;
       }
 

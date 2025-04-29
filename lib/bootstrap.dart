@@ -65,9 +65,7 @@ Future<void> lazyBootstrap(
   try {
     container.read(authProvider.notifier).state = false;
     await _writeLog('Initializing domain...');
-    await HttpService.initializeDomain();
-    HttpServiceProvider.initialize();
-    await HttpService.initialize(silentLogin: HttpServiceProvider.auth.silentLogin);
+    await HttpServiceProvider.initialize();
     userService = UserService();
     await _writeLog('Domain initialized successfully: ${HttpService.baseUrl}');
   } catch (e) {
