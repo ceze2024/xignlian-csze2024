@@ -68,8 +68,8 @@ Future<void> lazyBootstrap(
     await HttpServiceProvider.initialize();
     userService = UserService();
     await _writeLog('Domain initialized successfully: ${HttpService.baseUrl}');
-  } catch (e) {
-    await _writeLog('Error during domain initialization: $e');
+  } catch (e, stackTrace) {
+    await _writeLog('Error during domain initialization: $e\nStackTrace: $stackTrace');
     container.read(authProvider.notifier).state = false;
     domainInitFailed = true;
   }
@@ -83,22 +83,48 @@ Future<void> lazyBootstrap(
 
     if (token != null && userService != null) {
       await _writeLog('Validating token...');
-      final isValid = await userService.validateToken(token);
-      await _writeLog('Token validation result: $isValid');
+      bool isValid = false;
+      try {
+        isValid = await userService.validateToken(token);
+        await _writeLog('Token validation result: $isValid');
+      } catch (e, stackTrace) {
+        await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
+        isValid = false;
+      }
 
       if (isValid) {
         container.read(authProvider.notifier).state = true;
-        await _writeLog('User is logged in, runApp(App)');
-        runApp(
-          ProviderScope(
-            parent: container,
-            child: SentryUserInteractionWidget(
-              child: const App(),
+        await _writeLog('User is logged in, preparing to runApp(App)');
+        try {
+          runApp(
+            ProviderScope(
+              parent: container,
+              child: SentryUserInteractionWidget(
+                child: Builder(
+                  builder: (context) {
+                    try {
+                      return const App();
+                    } catch (e, stackTrace) {
+                      _writeLog('Error creating App widget: $e\nStackTrace: $stackTrace');
+                      return MaterialApp(
+                        home: Scaffold(
+                          body: Center(
+                            child: Text('应用程序初始化失败，请检查日志'),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
             ),
-          ),
-        );
-        await _writeLog('runApp(App) finished');
-        return;
+          );
+          await _writeLog('runApp(App) finished successfully');
+          return;
+        } catch (e, stackTrace) {
+          await _writeLog('Critical error during runApp: $e\nStackTrace: $stackTrace');
+          throw e;
+        }
       } else {
         container.read(authProvider.notifier).state = false;
         await _writeLog('Token is invalid, setting user to not logged in');
@@ -107,8 +133,8 @@ Future<void> lazyBootstrap(
       container.read(authProvider.notifier).state = false;
       await _writeLog('No token found, setting user to not logged in');
     }
-  } catch (e) {
-    await _writeLog('Error during token validation: $e');
+  } catch (e, stackTrace) {
+    await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
     container.read(authProvider.notifier).state = false;
   }
 
