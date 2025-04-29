@@ -49,8 +49,8 @@ class Subscription {
     Future<String?> Function(String) getSubscriptionLink,
   ) async {
     final t = ref.watch(translationsProvider);
-    final accessToken = await getToken();
-    if (accessToken == null) {
+    final loginToken = await getLoginToken();
+    if (loginToken == null) {
       _showSnackbar(context, t.userInfo.noAccessToken);
       return;
     }
@@ -71,7 +71,7 @@ class Subscription {
         } catch (_) {}
       }
       // 2. 本地不可用或连接失败，拉取新订阅
-      final newSubscriptionLink = await getSubscriptionLink(accessToken);
+      final newSubscriptionLink = await getSubscriptionLink(loginToken);
       if (newSubscriptionLink != null) {
         // 删除旧的订阅配置
         for (final profile in profiles) {

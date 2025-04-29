@@ -96,7 +96,10 @@ class UserService {
   Future<String?> getSubscriptionLink(String accessToken) async {
     final result = await _httpService.getRequest(
       "/api/v1/user/getSubscribe",
-      headers: {'Authorization': accessToken},
+      headers: {
+        'Authorization': accessToken,
+        'X-Token-Type': 'login_token',
+      },
     );
     // ignore: avoid_dynamic_calls
     return result["data"]["subscribe_url"] as String?;
@@ -105,7 +108,10 @@ class UserService {
   Future<String?> resetSubscriptionLink(String accessToken) async {
     final result = await _httpService.getRequest(
       "/api/v1/user/resetSecurity",
-      headers: {'Authorization': accessToken},
+      headers: {
+        'Authorization': accessToken,
+        'X-Token-Type': 'login_token',
+      },
     );
     return result["data"] as String?;
   }
