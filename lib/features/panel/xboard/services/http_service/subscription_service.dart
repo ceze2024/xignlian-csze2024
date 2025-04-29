@@ -22,11 +22,19 @@ class SubscriptionService {
           "/api/v1/user/getSubscribe",
           headers: {
             'Authorization': accessToken,
+            'X-Token-Type': 'login_token',
           },
         );
-        if (result['status'] != 'success') {
-          throw Exception('业务失败: \\${result['message'] ?? ''}');
+
+        if (result == null) {
+          throw Exception('HTTP响应为空');
         }
+
+        if (result['status'] != 'success') {
+          final message = result['message'] ?? '未知错误';
+          throw Exception('业务失败: $message');
+        }
+
         if (result.containsKey("data")) {
           final data = result["data"];
           if (data is Map<String, dynamic> && data.containsKey("subscribe_url")) {
@@ -38,17 +46,18 @@ class SubscriptionService {
             return data["subscribe_url"] as String?;
           }
         }
-        throw Exception("Failed to retrieve subscription link");
+        throw Exception("响应格式错误");
       } catch (e) {
         try {
           final dir = await getApplicationDocumentsDirectory();
           final file = File('${dir.path}/app_login.log');
           await file.writeAsString('[SubscriptionService] $now: getSubscriptionLink error: $e, retry $i\n', mode: FileMode.append);
         } catch (e) {}
-        if (i == 0) {
+
+        if (i == 0 && e.toString().contains('未登录或登陆已过期')) {
           final refreshed = await AuthService.silentLogin();
           if (refreshed) {
-            final newToken = await getToken();
+            final newToken = await getLoginToken();
             if (newToken != null) {
               try {
                 final dir = await getApplicationDocumentsDirectory();
@@ -59,6 +68,7 @@ class SubscriptionService {
             }
           }
         }
+
         if (i == retries - 1) {
           try {
             final dir = await getApplicationDocumentsDirectory();
