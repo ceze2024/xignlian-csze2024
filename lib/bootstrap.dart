@@ -33,6 +33,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _writeLog(String message) async {
   final now = DateTime.now().toString().split('.').first;
@@ -77,62 +78,71 @@ Future<void> lazyBootstrap(
   container.read(domainInitFailedProvider.notifier).state = domainInitFailed;
 
   try {
-    final loginToken = await getLoginToken();
-    final token = loginToken ?? await getToken();
-    await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
+    // 首先检查用户是否手动登出
+    final prefs = await SharedPreferences.getInstance();
+    final userLoggedOut = prefs.getBool('user_logged_out') ?? false;
 
-    if (token != null && userService != null) {
-      await _writeLog('Validating token...');
-      bool isValid = false;
-      try {
-        isValid = await userService.validateToken(token);
-        await _writeLog('Token validation result: $isValid');
-      } catch (e, stackTrace) {
-        await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
-        // 即使验证失败也不清除token，允许用户在主界面中重新登录
-        isValid = false;
-      }
+    if (userLoggedOut) {
+      await _writeLog('User logged out manually, skipping token validation');
+      container.read(authProvider.notifier).state = false;
+    } else {
+      final loginToken = await getLoginToken();
+      final token = loginToken ?? await getToken();
+      await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
 
-      if (isValid) {
-        container.read(authProvider.notifier).state = true;
-        await _writeLog('User is logged in, preparing to runApp(App)');
+      if (token != null && userService != null) {
+        await _writeLog('Validating token...');
+        bool isValid = false;
         try {
-          runApp(
-            ProviderScope(
-              parent: container,
-              child: SentryUserInteractionWidget(
-                child: Builder(
-                  builder: (context) {
-                    try {
-                      return const App();
-                    } catch (e, stackTrace) {
-                      _writeLog('Error creating App widget: $e\nStackTrace: $stackTrace');
-                      return MaterialApp(
-                        home: Scaffold(
-                          body: Center(
-                            child: Text('应用程序初始化失败，请检查日志'),
+          isValid = await userService.validateToken(token);
+          await _writeLog('Token validation result: $isValid');
+        } catch (e, stackTrace) {
+          await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
+          // 即使验证失败也不清除token，允许用户在主界面中重新登录
+          isValid = false;
+        }
+
+        if (isValid) {
+          container.read(authProvider.notifier).state = true;
+          await _writeLog('User is logged in, preparing to runApp(App)');
+          try {
+            runApp(
+              ProviderScope(
+                parent: container,
+                child: SentryUserInteractionWidget(
+                  child: Builder(
+                    builder: (context) {
+                      try {
+                        return const App();
+                      } catch (e, stackTrace) {
+                        _writeLog('Error creating App widget: $e\nStackTrace: $stackTrace');
+                        return MaterialApp(
+                          home: Scaffold(
+                            body: Center(
+                              child: Text('应用程序初始化失败，请检查日志'),
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                  },
+                        );
+                      }
+                    },
+                  ),
                 ),
               ),
-            ),
-          );
-          await _writeLog('runApp(App) finished successfully');
-          return;
-        } catch (e, stackTrace) {
-          await _writeLog('Critical error during runApp: $e\nStackTrace: $stackTrace');
-          throw e;
+            );
+            await _writeLog('runApp(App) finished successfully');
+            return;
+          } catch (e, stackTrace) {
+            await _writeLog('Critical error during runApp: $e\nStackTrace: $stackTrace');
+            throw e;
+          }
+        } else {
+          container.read(authProvider.notifier).state = false;
+          await _writeLog('Token is invalid, setting user to not logged in but preserving token');
         }
       } else {
         container.read(authProvider.notifier).state = false;
-        await _writeLog('Token is invalid, setting user to not logged in but preserving token');
+        await _writeLog('No token found, setting user to not logged in');
       }
-    } else {
-      container.read(authProvider.notifier).state = false;
-      await _writeLog('No token found, setting user to not logged in');
     }
   } catch (e, stackTrace) {
     await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');

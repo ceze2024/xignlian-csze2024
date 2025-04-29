@@ -13,7 +13,7 @@ final authProvider = StateProvider<bool>((ref) {
 Future<void> logout(BuildContext context, WidgetRef ref) async {
   // 清除存储的 token
   await deleteToken();
-  // 注销时设置 user_logged_out 标志为 true
+  // 设置user_logged_out标志为true
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('user_logged_out', true);
   // 不再清除邮箱和密码，保证自动刷新token可用
