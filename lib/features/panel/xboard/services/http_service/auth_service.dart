@@ -9,10 +9,10 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class AuthService {
-  late final HttpService _httpService;
+  HttpService _httpService;
 
-  AuthService() {
-    _httpService = HttpServiceProvider.instance;
+  AuthService() : _httpService = HttpService.instance {
+    _writeLog('AuthService initialized');
   }
 
   // 写日志到本地文件

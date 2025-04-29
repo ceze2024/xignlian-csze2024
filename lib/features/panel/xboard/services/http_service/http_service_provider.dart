@@ -5,9 +5,9 @@ class HttpServiceProvider {
   static late final AuthService _authService;
   static late final HttpService _httpService;
 
-  static void initialize() {
+  static void initialize() async {
+    await HttpService.initializeDomain();
     _authService = AuthService();
-    HttpService.initialize(silentLogin: _authService.silentLogin);
     _httpService = HttpService.instance;
   }
 
