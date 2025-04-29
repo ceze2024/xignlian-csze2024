@@ -3,10 +3,13 @@ import 'package:hiddify/features/panel/xboard/services/http_service/http_service
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 
 class SubscriptionService {
   final HttpService _httpService = HttpServiceProvider.instance;
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 1);
 
   Future<void> _writeLog(String message) async {
     final now = DateTime.now().toString().split('.').first;
@@ -15,16 +18,43 @@ class SubscriptionService {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/app_login.log');
       await file.writeAsString(logLine, mode: FileMode.append);
-    } catch (e) {}
+    } catch (e) {
+      print('Failed to write log: $e'); // 添加控制台日志作为备份
+    }
+  }
+
+  Future<T?> _retryOperation<T>(Future<T?> Function() operation, String operationName) async {
+    int retryCount = 0;
+    while (retryCount < _maxRetries) {
+      try {
+        final result = await operation();
+        if (result != null) {
+          return result;
+        }
+        retryCount++;
+        if (retryCount < _maxRetries) {
+          await _writeLog('$operationName attempt $retryCount failed, retrying after ${_retryDelay.inSeconds}s...');
+          await Future.delayed(_retryDelay);
+        }
+      } catch (e) {
+        await _writeLog('$operationName error on attempt $retryCount: $e');
+        retryCount++;
+        if (retryCount < _maxRetries) {
+          await Future.delayed(_retryDelay);
+        }
+      }
+    }
+    await _writeLog('$operationName failed after $_maxRetries attempts');
+    return null;
   }
 
   // 获取订阅链接的方法
-  Future<String?> getSubscriptionLink(String accessToken) async {
-    await _writeLog('getSubscriptionLink called, token: $accessToken');
-    try {
+  Future<String?> getSubscriptionLink() async {
+    return _retryOperation(() async {
+      await _writeLog('getSubscriptionLink called');
       final authData = await getToken();
-      if (authData == null) {
-        await _writeLog('No auth_data token found');
+      if (authData == null || authData.isEmpty) {
+        await _writeLog('No valid auth_data token found');
         return null;
       }
 
@@ -33,6 +63,12 @@ class SubscriptionService {
         headers: {
           'Authorization': authData,
           'X-Token-Type': 'auth_data',
+        },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          _writeLog('getSubscriptionLink request timeout');
+          throw TimeoutException('Request timed out');
         },
       );
 
@@ -43,9 +79,10 @@ class SubscriptionService {
 
       await _writeLog('API response: ${result.toString()}');
 
-      if (result['status'] != 'success') {
-        final message = result['message'] ?? '未知错误';
-        await _writeLog('getSubscriptionLink failed: $message');
+      // 处理未登录或登录过期的情况
+      if (result is Map<String, dynamic> && result.containsKey('message') && (result['message'].toString().contains('未登录') || result['message'].toString().contains('过期'))) {
+        await _writeLog('Token expired or invalid, clearing stored tokens');
+        await clearTokens(); // 清除所有存储的 token
         return null;
       }
 
@@ -72,46 +109,80 @@ class SubscriptionService {
         }
         await _writeLog('getSubscriptionLink success: $subscribeUrl');
         return subscribeUrl as String;
-      } else if (data is String) {
-        await _writeLog('getSubscriptionLink success: $data');
-        return data;
       }
 
       await _writeLog('getSubscriptionLink failed: unexpected data format');
       return null;
-    } catch (e) {
-      await _writeLog('getSubscriptionLink error: $e');
-      return null;
-    }
+    }, 'getSubscriptionLink');
   }
 
   // 重置订阅链接的方法
-  Future<String?> resetSubscriptionLink(String accessToken) async {
-    await _writeLog('resetSubscriptionLink called');
-    try {
+  Future<String?> resetSubscriptionLink() async {
+    return _retryOperation(() async {
+      await _writeLog('resetSubscriptionLink called');
+      final authData = await getToken();
+      if (authData == null || authData.isEmpty) {
+        await _writeLog('No valid auth_data token found');
+        return null;
+      }
+
       final result = await _httpService.getRequest(
         "/api/v1/passport/auth/forget",
         headers: {
-          'Authorization': accessToken,
+          'Authorization': authData,
           'X-Token-Type': 'auth_data',
         },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          _writeLog('resetSubscriptionLink request timeout');
+          throw TimeoutException('Request timed out');
+        },
       );
-      if (result['status'] != 'success') {
-        await _writeLog('resetSubscriptionLink failed: ${result['message'] ?? '未知错误'}');
+
+      if (result == null) {
+        await _writeLog('resetSubscriptionLink failed: HTTP response is null');
         return null;
       }
-      if (result.containsKey("data")) {
-        final data = result["data"];
-        if (data is String) {
-          await _writeLog('resetSubscriptionLink success');
-          return data;
-        }
+
+      await _writeLog('Reset API response: ${result.toString()}');
+
+      // 处理未登录或登录过期的情况
+      if (result is Map<String, dynamic> && result.containsKey('message') && (result['message'].toString().contains('未登录') || result['message'].toString().contains('过期'))) {
+        await _writeLog('Token expired or invalid, clearing stored tokens');
+        await clearTokens(); // 清除所有存储的 token
+        return null;
       }
-      await _writeLog('resetSubscriptionLink failed: invalid response format');
+
+      if (!result.containsKey('status')) {
+        await _writeLog('resetSubscriptionLink failed: no status field in response');
+        return null;
+      }
+
+      if (result['status'] != 'success') {
+        final message = result['message'] ?? '未知错误';
+        await _writeLog('resetSubscriptionLink failed: $message');
+        return null;
+      }
+
+      if (!result.containsKey("data")) {
+        await _writeLog('resetSubscriptionLink failed: no data field in response');
+        return null;
+      }
+
+      final data = result["data"];
+      if (data == null) {
+        await _writeLog('resetSubscriptionLink failed: data field is null');
+        return null;
+      }
+
+      if (data is String) {
+        await _writeLog('resetSubscriptionLink success: $data');
+        return data;
+      }
+
+      await _writeLog('resetSubscriptionLink failed: unexpected data format');
       return null;
-    } catch (e) {
-      await _writeLog('resetSubscriptionLink error: $e');
-      return null;
-    }
+    }, 'resetSubscriptionLink');
   }
 }
