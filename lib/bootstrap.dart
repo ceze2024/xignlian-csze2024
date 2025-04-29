@@ -20,6 +20,7 @@ import 'package:hiddify/features/deep_link/notifier/deep_link_notifier.dart';
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/panel/xboard/services/auth_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/user_service.dart';
 import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
@@ -52,7 +53,6 @@ Future<void> lazyBootstrap(
   LoggerController.preInit();
   FlutterError.onError = Logger.logFlutterError;
   WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
-  final userService = UserService();
   final stopWatch = Stopwatch()..start();
 
   final container = ProviderContainer(
@@ -61,11 +61,14 @@ Future<void> lazyBootstrap(
     ],
   );
   bool domainInitFailed = false;
+  UserService? userService;
   try {
     container.read(authProvider.notifier).state = false;
     await _writeLog('Initializing domain...');
     await HttpService.initialize();
-    await _writeLog('Domain initialized successfully: \\${HttpService.baseUrl}');
+    HttpServiceProvider.initialize();
+    userService = UserService();
+    await _writeLog('Domain initialized successfully: ${HttpService.baseUrl}');
   } catch (e) {
     await _writeLog('Error during domain initialization: $e');
     container.read(authProvider.notifier).state = false;
@@ -79,7 +82,7 @@ Future<void> lazyBootstrap(
     final token = loginToken ?? await getToken();
     await _writeLog('Retrieved token: $token (type: ' + (loginToken != null ? 'login_token' : 'auth_data') + ')');
 
-    if (token != null) {
+    if (token != null && userService != null) {
       await _writeLog('Validating token...');
       final isValid = await userService.validateToken(token);
       await _writeLog('Token validation result: $isValid');

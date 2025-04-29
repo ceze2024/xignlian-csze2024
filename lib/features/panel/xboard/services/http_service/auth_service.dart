@@ -1,13 +1,18 @@
 // services/auth_service.dart
+import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/domain_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class AuthService {
-  final HttpService _httpService = HttpService();
+  late final HttpService _httpService;
+
+  AuthService() {
+    _httpService = HttpService(silentLogin);
+  }
 
   // 写日志到本地文件
   Future<void> _writeLog(String message) async {
@@ -33,7 +38,7 @@ class AuthService {
         requiresHeaders: true,
       );
       final reqEnd = DateTime.now();
-      await _writeLog('POST请求返回, 耗时: [33m${reqEnd.difference(reqStart).inMilliseconds}ms[0m');
+      await _writeLog('POST请求返回, 耗时: [33m${reqEnd.difference(reqStart).inMilliseconds}ms[0m');
       await _writeLog('POST响应内容: ${result.toString()}');
 
       // 同时保存 auth_data 和 token
@@ -92,13 +97,13 @@ class AuthService {
     try {
       // 获取当前可用域名
       String baseUrl = await DomainService.fetchValidDomain();
-
-      final Uri url = Uri.parse(baseUrl);
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        throw Exception('无法打开官网链接');
+      // 打开官网
+      final url = Uri.parse(baseUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
-      throw '打开官网失败: $e';
+      print('Error opening official website: $e');
     }
   }
 
@@ -127,18 +132,17 @@ class AuthService {
   }
 
   // 静默登录：用本地保存的邮箱密码自动登录
-  static Future<bool> silentLogin() async {
+  Future<bool> silentLogin() async {
     final creds = await getSavedCredentials();
     final now = DateTime.now().toString().split('.').first;
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/app_login.log');
-      await file.writeAsString('[AuthService] $now: silentLogin() called, creds: \\${creds != null ? creds['email'] : 'null'}\n', mode: FileMode.append);
+      await file.writeAsString('[AuthService] $now: silentLogin() called, creds: ${creds != null ? creds['email'] : 'null'}\n', mode: FileMode.append);
     } catch (e) {}
     if (creds == null) return false;
     try {
-      final authService = AuthService();
-      await authService.login(creds['email']!, creds['password']!);
+      await login(creds['email']!, creds['password']!);
       try {
         final dir = await getApplicationDocumentsDirectory();
         final file = File('${dir.path}/app_login.log');
