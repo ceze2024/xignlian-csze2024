@@ -24,19 +24,18 @@ class SubscriptionService {
         "/api/v1/user/getSubscribe",
         headers: {
           'Authorization': accessToken,
-          'X-Token-Type': 'login_token',
+          'X-Token-Type': 'auth_data',
         },
       );
 
       if (result == null) {
         await _writeLog('getSubscriptionLink failed: HTTP response is null');
-        throw Exception('HTTP响应为空');
+        return null;
       }
 
       if (result['status'] != 'success') {
-        final message = result['message'] ?? '未知错误';
-        await _writeLog('getSubscriptionLink failed: $message');
-        throw Exception('业务失败: $message');
+        await _writeLog('getSubscriptionLink failed: ${result['message'] ?? '未知错误'}');
+        return null;
       }
 
       if (result.containsKey("data")) {
@@ -47,10 +46,10 @@ class SubscriptionService {
         }
       }
       await _writeLog('getSubscriptionLink failed: invalid response format');
-      throw Exception("响应格式错误");
+      return null;
     } catch (e) {
       await _writeLog('getSubscriptionLink error: $e');
-      rethrow;
+      return null;
     }
   }
 
@@ -62,13 +61,12 @@ class SubscriptionService {
         "/api/v1/passport/auth/forget",
         headers: {
           'Authorization': accessToken,
-          'X-Token-Type': 'login_token',
+          'X-Token-Type': 'auth_data',
         },
       );
       if (result['status'] != 'success') {
-        final message = result['message'] ?? '未知错误';
-        await _writeLog('resetSubscriptionLink failed: $message');
-        throw Exception('业务失败: $message');
+        await _writeLog('resetSubscriptionLink failed: ${result['message'] ?? '未知错误'}');
+        return null;
       }
       if (result.containsKey("data")) {
         final data = result["data"];
@@ -78,10 +76,10 @@ class SubscriptionService {
         }
       }
       await _writeLog('resetSubscriptionLink failed: invalid response format');
-      throw Exception("Failed to reset subscription link");
+      return null;
     } catch (e) {
       await _writeLog('resetSubscriptionLink error: $e');
-      rethrow;
+      return null;
     }
   }
 }
