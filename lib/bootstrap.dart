@@ -191,18 +191,31 @@ Future<void> lazyBootstrap(
   final debug = container.read(debugModeNotifierProvider) || kDebugMode;
 
   if (PlatformUtils.isDesktop) {
+    await _writeLog('Initializing desktop-specific features');
+
+    await _writeLog('Initializing window controller');
     await _init(
       "window controller",
       () => container.read(windowNotifierProvider.future),
     );
 
     final silentStart = container.read(Preferences.silentStart);
-    Logger.bootstrap.debug("silent start [${silentStart ? "Enabled" : "Disabled"}]");
+    await _writeLog('Silent start preference: ${silentStart ? "Enabled" : "Disabled"}');
+
     if (!silentStart) {
-      await container.read(windowNotifierProvider.notifier).open(focus: false);
+      await _writeLog('Opening window with focus: false');
+      try {
+        await container.read(windowNotifierProvider.notifier).open(focus: false);
+        await _writeLog('Window opened successfully');
+      } catch (e, stack) {
+        await _writeLog('Error opening window: $e\nStackTrace: $stack');
+      }
     } else {
+      await _writeLog('Silent start enabled, window will remain hidden and accessible via tray');
       Logger.bootstrap.debug("silent start, remain hidden accessible via tray");
     }
+
+    await _writeLog('Initializing auto start service');
     await _init(
       "auto start service",
       () => container.read(autoStartNotifierProvider.future),
