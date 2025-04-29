@@ -92,13 +92,16 @@ class LoginViewModel extends ChangeNotifier {
 
       findAuthData(result);
       if (authData != null && token != null) {
-        await storeToken(authData!);
+        await storeToken(authData);
+        await storeLoginToken(token);
         await _writeLog('保存token: $authData');
         await _saveCredentials();
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('user_logged_out', false);
         await _writeLog('登录成功，user_logged_out=false');
+
         await Subscription.updateSubscription(context, ref);
+
         ref.read(authProvider.notifier).state = true;
         await _writeLog('登录流程结束，已设置authProvider为true');
       } else {

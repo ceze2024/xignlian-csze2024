@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _tokenKey = 'auth_token';
 const String _loginTokenKey = 'login_token';
 
-Future<void> storeToken(String token) async {
+Future<void> storeToken(String? token) async {
+  if (token == null) return;
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_tokenKey, token);
   if (kDebugMode) {
@@ -22,7 +23,8 @@ Future<void> deleteToken() async {
   await prefs.remove(_tokenKey);
 }
 
-Future<void> storeLoginToken(String token) async {
+Future<void> storeLoginToken(String? token) async {
+  if (token == null) return;
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_loginTokenKey, token);
 }

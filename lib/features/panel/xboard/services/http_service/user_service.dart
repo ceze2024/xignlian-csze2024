@@ -71,7 +71,10 @@ class UserService {
     try {
       final response = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
-        headers: {'Authorization': token},
+        headers: {
+          'Authorization': token,
+          'X-Token-Type': 'login_token',
+        },
       );
       final result = response['status'] == 'success';
       try {
