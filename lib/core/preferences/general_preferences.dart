@@ -19,7 +19,7 @@ abstract class Preferences {
     false,
     overrideValue: _debugIntroPage && kDebugMode ? false : null,
   );
-
+//静默启动
   static final silentStart = PreferencesNotifier.create<bool, bool>(
     "silent_start",
     false,

@@ -5,6 +5,7 @@ import 'package:hiddify/features/panel/xboard/utils/storage/token_storage.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
 
 class SubscriptionService {
   final HttpService _httpService = HttpServiceProvider.instance;
@@ -61,8 +62,9 @@ class SubscriptionService {
       final result = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
         headers: {
-          'Authorization': authData,
-          'X-Token-Type': 'auth_data',
+          'Authorization': accessToken,
+          'X-Token-Type': 'login_token',
+          'Auth-Data': authData,
         },
       ).timeout(
         const Duration(seconds: 30),
@@ -81,9 +83,33 @@ class SubscriptionService {
 
       // 处理未登录或登录过期的情况
       if (result is Map<String, dynamic> && result.containsKey('message') && (result['message'].toString().contains('未登录') || result['message'].toString().contains('过期'))) {
-        await _writeLog('Token expired or invalid, but not clearing tokens to allow re-login');
-        // 不清除所有存储的token，让用户能够在UI中看到登录失效，并重新登录
-        // await clearTokens(); // 注释掉自动清除token的代码
+        await _writeLog('Token expired or invalid, trying silent login');
+        // 尝试静默登录
+        final authService = AuthService();
+        final loginSuccess = await authService.silentLogin();
+        if (loginSuccess) {
+          // 获取新token后重试
+          final newLoginToken = await getLoginToken();
+          final newAuthData = await getToken();
+          if (newLoginToken != null && newAuthData != null) {
+            final retryResult = await _httpService.getRequest(
+              "/api/v1/user/getSubscribe",
+              headers: {
+                'Authorization': newLoginToken,
+                'X-Token-Type': 'login_token',
+                'Auth-Data': newAuthData,
+              },
+            );
+            if (retryResult.containsKey("data")) {
+              final data = retryResult["data"];
+              if (data is Map<String, dynamic> && data.containsKey("subscribe_url")) {
+                await _writeLog('getSubscriptionLink retry success');
+                return data["subscribe_url"] as String;
+              }
+            }
+          }
+        }
+        await _writeLog('Silent login and retry failed');
         return null;
       }
 

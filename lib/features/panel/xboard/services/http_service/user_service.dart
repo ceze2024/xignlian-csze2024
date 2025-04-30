@@ -24,11 +24,18 @@ class UserService {
   Future<UserInfo?> fetchUserInfo(String accessToken) async {
     await _writeLog('fetchUserInfo called, token: $accessToken');
     try {
+      final authData = await getToken(); // 获取auth_data token
+      if (authData == null) {
+        await _writeLog('No auth_data token found');
+        return null;
+      }
+
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
         headers: {
           'Authorization': accessToken,
-          'X-Token-Type': 'auth_data',
+          'X-Token-Type': 'login_token',
+          'Auth-Data': authData,
         },
       );
       if (result.containsKey("data")) {
@@ -50,22 +57,21 @@ class UserService {
       final authData = await getToken(); // 获取auth_data token
       if (authData == null) {
         await _writeLog('No auth_data token found');
-        // 不清除token，让用户在启动时能继续尝试登录
         return false;
       }
 
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
         headers: {
-          'Authorization': authData,
-          'X-Token-Type': 'auth_data',
+          'Authorization': token,
+          'X-Token-Type': 'login_token',
+          'Auth-Data': authData,
         },
       );
       await _writeLog('validateToken success');
       return result['data'] != null;
     } catch (e) {
       await _writeLog('validateToken error: $e');
-      // 捕获到异常时不清除token，让用户可以在下次启动时再次尝试
       return false;
     }
   }
