@@ -122,10 +122,22 @@ class HttpService {
     await _writeLog('GET request to: $endpoint');
 
     try {
+      // 获取两种token
+      final loginToken = await getLoginToken();
+      final authData = await getToken();
+
+      // 合并请求头
+      final Map<String, String> finalHeaders = {
+        if (loginToken != null) 'Authorization': loginToken,
+        if (loginToken != null) 'X-Token-Type': 'login_token',
+        if (authData != null) 'Auth-Data': authData,
+        ...?headers,
+      };
+
       final response = await http
           .get(
             url,
-            headers: headers,
+            headers: finalHeaders,
           )
           .timeout(const Duration(seconds: 20));
 
@@ -144,12 +156,10 @@ class HttpService {
         final newHeaders = await _handleTokenExpired();
         if (newHeaders != null) {
           await _writeLog('Retrying GET request with new token');
-          final retryResponse = await http
-              .get(
-                url,
-                headers: newHeaders,
-              )
-              .timeout(const Duration(seconds: 20));
+          final retryResponse = await http.get(
+            url,
+            headers: {...newHeaders, ...?headers},
+          ).timeout(const Duration(seconds: 20));
 
           if (retryResponse.statusCode == 200) {
             await _writeLog('GET retry request success');
@@ -180,10 +190,23 @@ class HttpService {
     await _writeLog('POST request to: $endpoint');
 
     try {
+      // 获取两种token
+      final loginToken = await getLoginToken();
+      final authData = await getToken();
+
+      // 合并请求头
+      final Map<String, String> finalHeaders = {
+        if (requiresHeaders) 'Content-Type': 'application/json',
+        if (loginToken != null) 'Authorization': loginToken,
+        if (loginToken != null) 'X-Token-Type': 'login_token',
+        if (authData != null) 'Auth-Data': authData,
+        ...?headers,
+      };
+
       final response = await http
           .post(
             url,
-            headers: requiresHeaders ? (headers ?? {'Content-Type': 'application/json'}) : null,
+            headers: requiresHeaders ? finalHeaders : null,
             body: json.encode(body),
           )
           .timeout(const Duration(seconds: 20));
@@ -203,7 +226,7 @@ class HttpService {
         final newHeaders = await _handleTokenExpired();
         if (newHeaders != null) {
           await _writeLog('Retrying POST request with new token');
-          final retryHeaders = requiresHeaders ? {...newHeaders, 'Content-Type': 'application/json'} : null;
+          final retryHeaders = requiresHeaders ? {...newHeaders, 'Content-Type': 'application/json', ...?headers} : null;
 
           final retryResponse = await http
               .post(
