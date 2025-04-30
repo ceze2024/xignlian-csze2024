@@ -17,5 +17,5 @@ void main() async {
     ),
   );
 
-  return lazyBootstrap(widgetsBinding, Environment.dev);
+  return lazyBootstrap(widgetsBinding, Environment.prod);
 }
