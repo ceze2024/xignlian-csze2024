@@ -21,24 +21,19 @@ class LoggerController extends LoggyPrinter with InfraLogger {
     Loggy.initLoggy(logPrinter: const ConsolePrinter());
   }
 
-  static void init(String appLogPath) {
+  static void init(String appLogPath, {bool debugMode = false}) {
     _instance = LoggerController(
       const ConsolePrinter(),
-      {"app": FileLogPrinter(appLogPath)},
+      {},
     );
-    Loggy.initLoggy(logPrinter: _instance);
+    Loggy.initLoggy(
+      logPrinter: _instance,
+      logOptions: LogOptions(debugMode ? LogLevel.all : LogLevel.off),
+    );
   }
 
   static Future<void> postInit(bool debugMode) async {
-    final logLevel = debugMode ? LogLevel.all : LogLevel.info;
-    final logToFile = debugMode || (!Platform.isAndroid && !Platform.isIOS);
-
-    if (!logToFile) _instance.removePrinter("app");
-
-    Loggy.initLoggy(
-      logPrinter: _instance,
-      logOptions: LogOptions(logLevel),
-    );
+    if (!debugMode) return;
   }
 
   void addPrinter(String name, LoggyPrinter printer) {

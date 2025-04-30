@@ -12,8 +12,7 @@ class ConsolePrinter extends LoggyPrinter {
   final bool showColors;
 
   static final _levelColors = {
-    LogLevel.debug:
-        AnsiColor(foregroundColor: AnsiColor.grey(0.5), italic: true),
+    LogLevel.debug: AnsiColor(foregroundColor: AnsiColor.grey(0.5), italic: true),
     LogLevel.info: AnsiColor(foregroundColor: 35),
     LogLevel.warning: AnsiColor(foregroundColor: 214),
     LogLevel.error: AnsiColor(foregroundColor: 196),
@@ -21,11 +20,12 @@ class ConsolePrinter extends LoggyPrinter {
 
   @override
   void onLog(LogRecord record) {
+    // 发布版本不打印日志
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
     final colorize = showColors && stdout.supportsAnsiEscapes;
     final time = record.time.toIso8601String().split('T')[1];
-    final callerFrame = record.callerFrame == null
-        ? ' '
-        : ' (${record.callerFrame?.location}) ';
+    final callerFrame = record.callerFrame == null ? ' ' : ' (${record.callerFrame?.location}) ';
 
     final String logLevel;
     if (colorize) {
@@ -34,9 +34,10 @@ class ConsolePrinter extends LoggyPrinter {
       logLevel = "[${record.level.name.toUpperCase()}]".padRight(10);
     }
 
-    final color =
-        showColors ? levelColor(record.level) ?? AnsiColor() : AnsiColor();
+    final color = showColors ? levelColor(record.level) ?? AnsiColor() : AnsiColor();
 
+    // 发布版本不打印日志
+    /*
     print(
       color(
         '$time $logLevel [${record.loggerName}]$callerFrame${record.message}',
@@ -46,6 +47,7 @@ class ConsolePrinter extends LoggyPrinter {
     if (record.stackTrace != null) {
       print(record.stackTrace);
     }
+    */
   }
 
   AnsiColor? levelColor(LogLevel level) {
@@ -68,6 +70,9 @@ class FileLogPrinter extends LoggyPrinter {
 
   @override
   void onLog(LogRecord record) {
+    // 发布版本不写入日志文件
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
     final time = record.time.toIso8601String().split('T')[1];
     _sink.writeln("$time - $record");
     if (record.error != null) {
