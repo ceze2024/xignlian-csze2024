@@ -43,15 +43,15 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   void initState() {
     super.initState();
-    // remove for now...
-    //
-    // Future.delayed(const Duration(seconds: 2)).then(
-    //   (_) async {
-    //     if (ref.read(startedByUserProvider) && PlatformUtils.isDesktop) {
-    //       loggy.debug("previously started by user, trying to connect");
-    //       return ref.read(connectionNotifierProvider.notifier).mayConnect();
-    //     }
-    //   },
-    // );
+
+    // 延迟一秒执行自动连接
+    Future.delayed(const Duration(seconds: 1)).then(
+      (_) async {
+        if (mounted) {
+          loggy.debug("自动连接");
+          return ref.read(connectionNotifierProvider.notifier).mayConnect();
+        }
+      },
+    );
   }
 }
