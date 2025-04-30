@@ -63,9 +63,8 @@ class HttpService {
       while (_isRefreshingToken) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      final loginToken = await getLoginToken();
       final authData = await getToken();
-      if (loginToken != null && authData != null) {
+      if (authData != null) {
         return {
           'Authorization': authData,
           'X-Token-Type': 'auth_data',
@@ -83,9 +82,8 @@ class HttpService {
 
       final refreshed = await _silentLogin!();
       if (refreshed) {
-        final loginToken = await getLoginToken();
         final authData = await getToken();
-        if (loginToken != null && authData != null) {
+        if (authData != null) {
           await _writeLog('Silent login success, got new tokens');
           return {
             'Authorization': authData,
@@ -109,15 +107,13 @@ class HttpService {
     await _writeLog('GET request to: $endpoint');
 
     try {
-      // 获取两种token
-      final loginToken = await getLoginToken();
+      // 获取 auth_data token
       final authData = await getToken();
 
-      // 合并请求头
+      // 合并请求头，优先使用 auth_data token
       final Map<String, String> finalHeaders = {
-        if (loginToken != null) 'Authorization': loginToken,
-        if (loginToken != null) 'X-Token-Type': 'login_token',
-        if (authData != null) 'Auth-Data': authData,
+        if (authData != null) 'Authorization': authData,
+        if (authData != null) 'X-Token-Type': 'auth_data',
         ...?headers,
       };
 
@@ -177,16 +173,14 @@ class HttpService {
     await _writeLog('POST request to: $endpoint');
 
     try {
-      // 获取两种token
-      final loginToken = await getLoginToken();
+      // 获取 auth_data token
       final authData = await getToken();
 
-      // 合并请求头
+      // 合并请求头，优先使用 auth_data token
       final Map<String, String> finalHeaders = {
         if (requiresHeaders) 'Content-Type': 'application/json',
-        if (loginToken != null) 'Authorization': loginToken,
-        if (loginToken != null) 'X-Token-Type': 'login_token',
-        if (authData != null) 'Auth-Data': authData,
+        if (authData != null) 'Authorization': authData,
+        if (authData != null) 'X-Token-Type': 'auth_data',
         ...?headers,
       };
 
