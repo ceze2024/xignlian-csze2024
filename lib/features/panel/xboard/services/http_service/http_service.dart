@@ -63,11 +63,10 @@ class HttpService {
       while (_isRefreshingToken) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      final loginToken = await getLoginToken();
-      if (loginToken != null) {
+      final authData = await getToken();
+      if (authData != null) {
         return {
-          'Authorization': loginToken,
-          'X-Token-Type': 'login_token',
+          'Authorization': authData,
         };
       }
       return null;
@@ -82,12 +81,11 @@ class HttpService {
 
       final refreshed = await _silentLogin!();
       if (refreshed) {
-        final loginToken = await getLoginToken();
-        if (loginToken != null) {
+        final authData = await getToken();
+        if (authData != null) {
           await _writeLog('Silent login success, got new tokens');
           return {
-            'Authorization': loginToken,
-            'X-Token-Type': 'login_token',
+            'Authorization': authData,
           };
         }
       }
@@ -109,26 +107,13 @@ class HttpService {
     try {
       Map<String, String> finalHeaders = {};
 
-      // 根据不同接口使用不同的token
-      if (endpoint == '/api/v1/user/info') {
-        // 用户信息接口使用auth_data token
-        final authData = await getToken();
-        if (authData != null) {
-          finalHeaders['Authorization'] = authData;
+      // 获取auth_data token
+      final authData = await getToken();
+      if (authData != null) {
+        finalHeaders['Authorization'] = authData;
+        // 只在用户信息接口添加X-Token-Type头
+        if (endpoint == '/api/v1/user/info') {
           finalHeaders['X-Token-Type'] = 'auth_data';
-        }
-      } else if (endpoint.contains('/api/v1/user/plan/fetch') || endpoint.contains('/api/v1/user/invite/fetch')) {
-        // 套餐和邀请码接口使用login_token
-        final loginToken = await getLoginToken();
-        if (loginToken != null) {
-          finalHeaders['Authorization'] = loginToken;
-          finalHeaders['X-Token-Type'] = 'login_token';
-        }
-      } else {
-        // 其他接口默认使用auth_data token
-        final authData = await getToken();
-        if (authData != null) {
-          finalHeaders['Authorization'] = authData;
         }
       }
 
@@ -199,26 +184,13 @@ class HttpService {
         finalHeaders['Content-Type'] = 'application/json';
       }
 
-      // 根据不同接口使用不同的token
-      if (endpoint == '/api/v1/user/info') {
-        // 用户信息接口使用auth_data token
-        final authData = await getToken();
-        if (authData != null) {
-          finalHeaders['Authorization'] = authData;
+      // 获取auth_data token
+      final authData = await getToken();
+      if (authData != null) {
+        finalHeaders['Authorization'] = authData;
+        // 只在用户信息接口添加X-Token-Type头
+        if (endpoint == '/api/v1/user/info') {
           finalHeaders['X-Token-Type'] = 'auth_data';
-        }
-      } else if (endpoint.contains('/api/v1/user/plan/fetch') || endpoint.contains('/api/v1/user/invite/fetch')) {
-        // 套餐和邀请码接口使用login_token
-        final loginToken = await getLoginToken();
-        if (loginToken != null) {
-          finalHeaders['Authorization'] = loginToken;
-          finalHeaders['X-Token-Type'] = 'login_token';
-        }
-      } else {
-        // 其他接口默认使用auth_data token
-        final authData = await getToken();
-        if (authData != null) {
-          finalHeaders['Authorization'] = authData;
         }
       }
 
