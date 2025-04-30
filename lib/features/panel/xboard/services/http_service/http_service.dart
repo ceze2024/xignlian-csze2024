@@ -67,7 +67,6 @@ class HttpService {
       if (authData != null) {
         return {
           'Authorization': authData,
-          'X-Token-Type': 'auth_data',
         };
       }
       return null;
@@ -87,7 +86,6 @@ class HttpService {
           await _writeLog('Silent login success, got new tokens');
           return {
             'Authorization': authData,
-            'X-Token-Type': 'auth_data',
           };
         }
       }
@@ -110,10 +108,10 @@ class HttpService {
       // 获取 auth_data token
       final authData = await getToken();
 
-      // 合并请求头，优先使用 auth_data token
+      // 合并请求头，只在用户信息接口添加X-Token-Type头
       final Map<String, String> finalHeaders = {
         if (authData != null) 'Authorization': authData,
-        if (authData != null) 'X-Token-Type': 'auth_data',
+        if (authData != null && endpoint == '/api/v1/user/info') 'X-Token-Type': 'auth_data',
         ...?headers,
       };
 
@@ -176,11 +174,11 @@ class HttpService {
       // 获取 auth_data token
       final authData = await getToken();
 
-      // 合并请求头，优先使用 auth_data token
+      // 合并请求头，只在用户信息接口添加X-Token-Type头
       final Map<String, String> finalHeaders = {
         if (requiresHeaders) 'Content-Type': 'application/json',
         if (authData != null) 'Authorization': authData,
-        if (authData != null) 'X-Token-Type': 'auth_data',
+        if (authData != null && endpoint == '/api/v1/user/info') 'X-Token-Type': 'auth_data',
         ...?headers,
       };
 

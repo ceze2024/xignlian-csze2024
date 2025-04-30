@@ -9,7 +9,9 @@ class PlanService {
   Future<List<Plan>> fetchPlanData(String accessToken) async {
     final result = await _httpService.getRequest(
       "/api/v1/user/plan/fetch",
-      headers: {'Authorization': accessToken},
+      headers: {
+        'Authorization': accessToken,
+      },
     );
     return (result["data"] as List).cast<Map<String, dynamic>>().map((json) => Plan.fromJson(json)).toList();
   }
