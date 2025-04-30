@@ -18,6 +18,8 @@ import 'package:sliver_tools/sliver_tools.dart';
 import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/subscription.dart';
 
+final subscriptionLoadingProvider = StateProvider<bool>((ref) => false);
+
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
 
@@ -120,20 +122,36 @@ class HomePage extends HookConsumerWidget {
                                     child: Text(t.home.goToPurchasePage),
                                   ),
                                   const SizedBox(width: 16),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      try {
-                                        await Subscription.updateSubscription(context, ref);
-                                      } catch (e) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text(e.toString())),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    child: const Text('更新订阅'),
-                                  ),
+                                  Consumer(builder: (context, ref, _) {
+                                    final isLoading = ref.watch(subscriptionLoadingProvider);
+                                    return ElevatedButton(
+                                      onPressed: isLoading
+                                          ? null
+                                          : () async {
+                                              try {
+                                                ref.read(subscriptionLoadingProvider.notifier).state = true;
+                                                await Subscription.updateSubscription(context, ref);
+                                              } catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text(e.toString())),
+                                                  );
+                                                }
+                                              } finally {
+                                                if (context.mounted) {
+                                                  ref.read(subscriptionLoadingProvider.notifier).state = false;
+                                                }
+                                              }
+                                            },
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Text('更新订阅'),
+                                    );
+                                  }),
                                 ],
                               ),
                             ],
