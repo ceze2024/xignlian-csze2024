@@ -18,6 +18,7 @@ import 'package:hiddify/gen/fonts.gen.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // 添加一个显示流量超出限额弹窗的函数
 Future<void> showTrafficExceededDialog(BuildContext context, WidgetRef ref) async {
@@ -27,7 +28,10 @@ Future<void> showTrafficExceededDialog(BuildContext context, WidgetRef ref) asyn
     barrierDismissible: false, // 用户必须点击按钮关闭对话框
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('流量超出限额提醒', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        title: Text(
+          '流量超出限额提醒',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
         content: SingleChildScrollView(
           child: ListBody(
             children: <Widget>[
@@ -37,25 +41,69 @@ Future<void> showTrafficExceededDialog(BuildContext context, WidgetRef ref) asyn
                 size: 64,
               ),
               const SizedBox(height: 16),
-              Text('您的账户流量已用尽，无法继续使用服务。请考虑以下选项：'),
+              const Text('您的账户流量已用尽，无法继续使用服务。请考虑以下选项：'),
               const SizedBox(height: 12),
-              Text('1. 购买新的套餐'),
-              Text('2. 等待下个周期流量重置'),
-              Text('3. 联系客服咨询'),
+              const Text('1. 购买新的套餐'),
+              const Text('2. 等待下个周期流量重置'),
+              const Text('3. 联系客服咨询'),
             ],
           ),
         ),
         actions: <Widget>[
           TextButton(
-            child: Text('购买套餐'),
+            child: const Text('购买套餐'),
             onPressed: () {
-              // 导航到购买套餐页面
               context.pop();
               const PurchaseRoute().go(context);
             },
           ),
           TextButton(
-            child: Text('确定'),
+            child: const Text('确定'),
+            onPressed: () {
+              context.pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// 添加一个显示即将到期提醒的函数
+Future<void> showExpirationWarningDialog(BuildContext context, WidgetRef ref, int remainingDays) async {
+  final t = ref.watch(translationsProvider);
+  return showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('服务即将到期提醒', style: TextStyle(color: Colors.orange)),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              const Icon(
+                Icons.access_time,
+                color: Colors.orange,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              Text('您的服务将在 $remainingDays 天后到期，为避免服务中断，请及时续费。'),
+              const SizedBox(height: 12),
+              const Text('1. 可以提前续费以确保服务不中断'),
+              const Text('2. 到期后需要重新订阅才能继续使用'),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('续费'),
+            onPressed: () {
+              context.pop();
+              const PurchaseRoute().go(context);
+            },
+          ),
+          TextButton(
+            child: const Text('稍后提醒'),
             onPressed: () {
               context.pop();
             },
@@ -97,11 +145,27 @@ class ProfileTile extends HookConsumerWidget {
       _ => null,
     };
 
-    // 检查是否流量超出限额，如果是活动配置文件且显示在主页面，则显示弹窗
-    if (isMain && profile.active && subInfo != null && subInfo.ratio >= 1) {
-      // 使用addPostFrameCallback确保在构建完成后显示弹窗
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showTrafficExceededDialog(context, ref);
+    // 检查是否流量超出限额和即将到期，如果是活动配置文件且显示在主页面，则显示相应弹窗
+    if (isMain && profile.active && subInfo != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (subInfo.ratio >= 1) {
+          showTrafficExceededDialog(context, ref);
+        } else if (!subInfo.isExpired && subInfo.remaining.inDays <= 7) {
+          // 获取上次显示提醒的时间
+          final prefs = await SharedPreferences.getInstance();
+          final lastWarningKey = 'last_expiration_warning_${profile.id}';
+          final lastWarningTime = DateTime.tryParse(prefs.getString(lastWarningKey) ?? '');
+
+          final now = DateTime.now();
+          if (lastWarningTime == null || now.difference(lastWarningTime).inDays >= 1) {
+            // 显示提醒并更新最后提醒时间
+            showExpirationWarningDialog(context, ref, subInfo.remaining.inDays);
+            prefs.setString(
+              lastWarningKey,
+              now.toIso8601String(),
+            );
+          }
+        }
       });
     }
 
