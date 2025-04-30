@@ -146,7 +146,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       const SizedBox(height: 20),
                       if (loginViewModel.isLoading)
-                        const Center(child: CircularProgressIndicator())
+                        Column(
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 10),
+                            Text(
+                              '正在登录中，请稍候...',
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ],
+                        )
                       else
                         ElevatedButton(
                           onPressed: domainCheckViewModel.isSuccess
