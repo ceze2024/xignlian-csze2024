@@ -37,7 +37,7 @@
         "pageTitle": "主页",
         "emptyProfilesMsg": "从添加订阅配置文件开始",
         "noActiveProfileMsg": "选择配置文件",
-        "noSubscriptionMsg": "当前账户没有可用订阅，请前往套餐购买页面，购买相应的套餐后使用",
+        "noSubscriptionMsg": "当前账户没有可用订阅，请前往套餐购买页面，购买相应的套餐后，点击更新订阅或重新登录",
         "goToPurchasePage": "前往购买套餐"
     },
     "purchase": {
@@ -163,7 +163,7 @@
         "confirmButton": "登出"
     },
     "login": {
-        "welcome": "Hi ",
+        "welcome": "",
         "username": "邮箱",
         "password": "密码",
         "loginButton": "登录",
@@ -489,7 +489,7 @@
         "tapToConnect": "点击连接",
         "connecting": "正在连接",
         "disconnecting": "正在断开连接",
-        "connected": "已连接",
+        "connected": "连接成功",
         "reconnect": "重新连接",
         "connectAnyWay": "连接",
         "experimentalNotice": "使用中的实验功能",

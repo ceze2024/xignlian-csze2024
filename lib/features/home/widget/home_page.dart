@@ -16,6 +16,7 @@ import 'package:hiddify/utils/placeholders.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
+import 'package:hiddify/features/panel/xboard/services/subscription.dart';
 
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
@@ -108,12 +109,32 @@ class HomePage extends HookConsumerWidget {
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
                               const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // 导航到套餐购买页面
-                                  const PurchaseRoute().push(context);
-                                },
-                                child: Text(t.home.goToPurchasePage),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // 导航到套餐购买页面
+                                      const PurchaseRoute().push(context);
+                                    },
+                                    child: Text(t.home.goToPurchasePage),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      try {
+                                        await Subscription.updateSubscription(context, ref);
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(e.toString())),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: const Text('更新订阅'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
