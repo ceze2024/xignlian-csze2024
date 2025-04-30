@@ -62,7 +62,9 @@ class InviteCodeSection extends ConsumerWidget {
                 Text(
                   t.inviteCode.inviteCodeListTitle,
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold,),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _generateInviteCode(context, ref),
@@ -87,15 +89,15 @@ class InviteCodeSection extends ConsumerWidget {
                       itemCount: inviteCodes.length,
                       itemBuilder: (context, index) {
                         final inviteCode = inviteCodes[index];
-                        final fullInviteLink =
-                            InviteCodeService().getInviteLink(inviteCode.code);
+                        final fullInviteLink = InviteCodeService().getInviteLink(inviteCode.code);
                         return ListTile(
                           title: Text(inviteCode.code),
                           trailing: IconButton(
                             icon: const Icon(Icons.copy),
                             onPressed: () {
                               Clipboard.setData(
-                                  ClipboardData(text: fullInviteLink),);
+                                ClipboardData(text: fullInviteLink),
+                              );
                               _showSnackbar(
                                 context,
                                 '${t.inviteCode.copiedInviteCode} $fullInviteLink',
@@ -106,8 +108,7 @@ class InviteCodeSection extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(child: CircularProgressIndicator()),
                   error: (error, _) => Center(
                     child: Text('${t.inviteCode.fetchInviteCodesError} $error'),
                   ),

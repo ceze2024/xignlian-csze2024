@@ -10,10 +10,6 @@ class InviteCodeService {
   Future<bool> generateInviteCode(String accessToken) async {
     await _httpService.getRequest(
       "/api/v1/user/invite/save",
-      headers: {
-        'Authorization': accessToken,
-        'X-Token-Type': 'login_token',
-      },
     );
     return true; // 如果没有抛出异常，则表示成功生成邀请码
   }
@@ -22,10 +18,6 @@ class InviteCodeService {
   Future<List<InviteCode>> fetchInviteCodes(String accessToken) async {
     final result = await _httpService.getRequest(
       "/api/v1/user/invite/fetch",
-      headers: {
-        'Authorization': accessToken,
-        'X-Token-Type': 'login_token',
-      },
     );
 
     if (result.containsKey("data") && result["data"] is Map<String, dynamic>) {

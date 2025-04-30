@@ -7,11 +7,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // 创建一个 FutureProvider 来管理邀请码列表
 final inviteCodesProvider = FutureProvider<List<InviteCode>>((ref) async {
-  final loginToken = await getLoginToken(); // 使用login_token
-  if (loginToken == null) {
+  final authData = await getToken(); // 使用 auth_data token
+  if (authData == null) {
     throw Exception('No access token found.');
   }
-  return InviteCodeService().fetchInviteCodes(loginToken);
+  return InviteCodeService().fetchInviteCodes(authData);
 });
 
 // 定义 userInfoProvider
