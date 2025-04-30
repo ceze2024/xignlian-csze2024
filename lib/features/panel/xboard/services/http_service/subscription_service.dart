@@ -62,9 +62,8 @@ class SubscriptionService {
       final result = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
         headers: {
-          'Authorization': accessToken,
-          'X-Token-Type': 'login_token',
-          'Auth-Data': authData,
+          'Authorization': authData,
+          'X-Token-Type': 'auth_data',
         },
       ).timeout(
         const Duration(seconds: 30),
