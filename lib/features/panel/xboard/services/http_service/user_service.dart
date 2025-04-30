@@ -33,9 +33,8 @@ class UserService {
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
         headers: {
-          'Authorization': accessToken,
-          'X-Token-Type': 'login_token',
-          'Auth-Data': authData,
+          'Authorization': authData,
+          'X-Token-Type': 'auth_data',
         },
       );
       if (result.containsKey("data")) {
@@ -63,13 +62,18 @@ class UserService {
       final result = await _httpService.getRequest(
         "/api/v1/user/info",
         headers: {
-          'Authorization': token,
-          'X-Token-Type': 'login_token',
-          'Auth-Data': authData,
+          'Authorization': authData,
+          'X-Token-Type': 'auth_data',
         },
       );
-      await _writeLog('validateToken success');
-      return result['data'] != null;
+
+      if (result['data'] != null) {
+        await _writeLog('validateToken success');
+        return true;
+      }
+
+      await _writeLog('validateToken failed: invalid response');
+      return false;
     } catch (e) {
       await _writeLog('validateToken error: $e');
       return false;
@@ -79,10 +83,16 @@ class UserService {
   Future<String?> getSubscriptionLink(String accessToken) async {
     await _writeLog('getSubscriptionLink called');
     try {
+      final authData = await getToken();
+      if (authData == null) {
+        await _writeLog('No auth_data token found');
+        return null;
+      }
+
       final result = await _httpService.getRequest(
         "/api/v1/user/getSubscribe",
         headers: {
-          'Authorization': accessToken,
+          'Authorization': authData,
           'X-Token-Type': 'auth_data',
         },
       );
@@ -102,11 +112,17 @@ class UserService {
   }
 
   Future<String?> resetSubscriptionLink(String accessToken) async {
+    final authData = await getToken();
+    if (authData == null) {
+      await _writeLog('No auth_data token found');
+      return null;
+    }
+
     final result = await _httpService.getRequest(
       "/api/v1/user/resetSecurity",
       headers: {
-        'Authorization': accessToken,
-        'X-Token-Type': 'login_token',
+        'Authorization': authData,
+        'X-Token-Type': 'auth_data',
       },
     );
     return result["data"] as String?;

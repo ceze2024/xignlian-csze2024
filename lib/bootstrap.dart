@@ -19,6 +19,7 @@ import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
 import 'package:hiddify/features/deep_link/notifier/deep_link_notifier.dart';
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/panel/xboard/services/auth_provider.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/user_service.dart';
@@ -33,6 +34,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/widgets.dart';
 
 Future<void> _writeLog(String message) async {
   final now = DateTime.now().toString().split('.').first;
@@ -109,15 +111,55 @@ Future<void> lazyBootstrap(
         try {
           isValid = await userService.validateToken(token);
           await _writeLog('Token validation result: $isValid');
+
+          if (!isValid) {
+            // 如果token无效,尝试静默登录
+            final authService = AuthService();
+            final silentLoginSuccess = await authService.silentLogin();
+            if (silentLoginSuccess) {
+              // 重新验证token
+              final newToken = await getToken();
+              if (newToken != null) {
+                isValid = await userService.validateToken(newToken);
+                await _writeLog('Token revalidation after silent login result: $isValid');
+              }
+            }
+          }
         } catch (e, stackTrace) {
           await _writeLog('Error during token validation: $e\nStackTrace: $stackTrace');
-          isValid = false;
+          // 如果验证出错,尝试静默登录
+          final authService = AuthService();
+          final silentLoginSuccess = await authService.silentLogin();
+          if (silentLoginSuccess) {
+            // 重新验证token
+            final newToken = await getToken();
+            if (newToken != null) {
+              isValid = await userService.validateToken(newToken);
+              await _writeLog('Token revalidation after silent login result: $isValid');
+            }
+          } else {
+            isValid = false;
+          }
         }
 
         container.read(authProvider.notifier).state = isValid;
       } else {
         await _writeLog('No token found');
-        container.read(authProvider.notifier).state = false;
+        // 如果没有token,尝试静默登录
+        final authService = AuthService();
+        final silentLoginSuccess = await authService.silentLogin();
+        if (silentLoginSuccess) {
+          final newToken = await getToken();
+          if (newToken != null) {
+            final isValid = await userService.validateToken(newToken);
+            await _writeLog('Token validation after silent login result: $isValid');
+            container.read(authProvider.notifier).state = isValid;
+          } else {
+            container.read(authProvider.notifier).state = false;
+          }
+        } else {
+          container.read(authProvider.notifier).state = false;
+        }
       }
     } catch (e, stackTrace) {
       await _writeLog('Error during authentication process: $e\nStackTrace: $stackTrace');

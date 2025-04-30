@@ -138,10 +138,18 @@ class AuthService {
       final creds = await getSavedCredentials();
       if (creds != null) {
         final result = await login(creds['email']!, creds['password']!);
-        return result != null;
+        if (result['data'] != null) {
+          final data = result['data'];
+          if (data['auth_data'] != null && data['token'] != null) {
+            await storeToken(data['auth_data'].toString());
+            await storeLoginToken(data['token'].toString());
+            return true;
+          }
+        }
       }
       return false;
     } catch (e) {
+      await _writeLog('Silent login failed: $e');
       return false;
     }
   }

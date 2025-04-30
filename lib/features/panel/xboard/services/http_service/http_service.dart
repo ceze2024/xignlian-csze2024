@@ -67,9 +67,8 @@ class HttpService {
       final authData = await getToken();
       if (loginToken != null && authData != null) {
         return {
-          'Authorization': loginToken,
-          'X-Token-Type': 'login_token',
-          'Auth-Data': authData,
+          'Authorization': authData,
+          'X-Token-Type': 'auth_data',
         };
       }
       return null;
@@ -78,18 +77,7 @@ class HttpService {
     _isRefreshingToken = true;
     try {
       if (_silentLogin == null) {
-        await _writeLog('No silent login callback provided, trying to get saved token');
-        // 尝试获取已保存的 token，但不清除它们
-        final loginToken = await getLoginToken();
-        final authData = await getToken();
-        if (loginToken != null && authData != null) {
-          return {
-            'Authorization': loginToken,
-            'X-Token-Type': 'login_token',
-            'Auth-Data': authData,
-          };
-        }
-        await _writeLog('No saved token found');
+        await _writeLog('No silent login callback provided');
         return null;
       }
 
@@ -100,9 +88,8 @@ class HttpService {
         if (loginToken != null && authData != null) {
           await _writeLog('Silent login success, got new tokens');
           return {
-            'Authorization': loginToken,
-            'X-Token-Type': 'login_token',
-            'Auth-Data': authData,
+            'Authorization': authData,
+            'X-Token-Type': 'auth_data',
           };
         }
       }
