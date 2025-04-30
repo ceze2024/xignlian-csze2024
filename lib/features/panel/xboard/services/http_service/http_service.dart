@@ -63,10 +63,11 @@ class HttpService {
       while (_isRefreshingToken) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      final authData = await getToken();
-      if (authData != null) {
+      final loginToken = await getLoginToken();
+      if (loginToken != null) {
         return {
-          'Authorization': authData,
+          'Authorization': loginToken,
+          'X-Token-Type': 'login_token',
         };
       }
       return null;
@@ -81,11 +82,12 @@ class HttpService {
 
       final refreshed = await _silentLogin!();
       if (refreshed) {
-        final authData = await getToken();
-        if (authData != null) {
+        final loginToken = await getLoginToken();
+        if (loginToken != null) {
           await _writeLog('Silent login success, got new tokens');
           return {
-            'Authorization': authData,
+            'Authorization': loginToken,
+            'X-Token-Type': 'login_token',
           };
         }
       }
@@ -105,15 +107,35 @@ class HttpService {
     await _writeLog('GET request to: $endpoint');
 
     try {
-      // 获取 auth_data token
-      final authData = await getToken();
+      Map<String, String> finalHeaders = {};
 
-      // 合并请求头，只在用户信息接口添加X-Token-Type头
-      final Map<String, String> finalHeaders = {
-        if (authData != null) 'Authorization': authData,
-        if (authData != null && endpoint == '/api/v1/user/info') 'X-Token-Type': 'auth_data',
-        ...?headers,
-      };
+      // 根据不同接口使用不同的token
+      if (endpoint == '/api/v1/user/info') {
+        // 用户信息接口使用auth_data token
+        final authData = await getToken();
+        if (authData != null) {
+          finalHeaders['Authorization'] = authData;
+          finalHeaders['X-Token-Type'] = 'auth_data';
+        }
+      } else if (endpoint.contains('/api/v1/user/plan/fetch') || endpoint.contains('/api/v1/user/invite/fetch')) {
+        // 套餐和邀请码接口使用login_token
+        final loginToken = await getLoginToken();
+        if (loginToken != null) {
+          finalHeaders['Authorization'] = loginToken;
+          finalHeaders['X-Token-Type'] = 'login_token';
+        }
+      } else {
+        // 其他接口默认使用auth_data token
+        final authData = await getToken();
+        if (authData != null) {
+          finalHeaders['Authorization'] = authData;
+        }
+      }
+
+      // 合并自定义请求头
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+      }
 
       final response = await http
           .get(
@@ -171,16 +193,39 @@ class HttpService {
     await _writeLog('POST request to: $endpoint');
 
     try {
-      // 获取 auth_data token
-      final authData = await getToken();
+      Map<String, String> finalHeaders = {};
 
-      // 合并请求头，只在用户信息接口添加X-Token-Type头
-      final Map<String, String> finalHeaders = {
-        if (requiresHeaders) 'Content-Type': 'application/json',
-        if (authData != null) 'Authorization': authData,
-        if (authData != null && endpoint == '/api/v1/user/info') 'X-Token-Type': 'auth_data',
-        ...?headers,
-      };
+      if (requiresHeaders) {
+        finalHeaders['Content-Type'] = 'application/json';
+      }
+
+      // 根据不同接口使用不同的token
+      if (endpoint == '/api/v1/user/info') {
+        // 用户信息接口使用auth_data token
+        final authData = await getToken();
+        if (authData != null) {
+          finalHeaders['Authorization'] = authData;
+          finalHeaders['X-Token-Type'] = 'auth_data';
+        }
+      } else if (endpoint.contains('/api/v1/user/plan/fetch') || endpoint.contains('/api/v1/user/invite/fetch')) {
+        // 套餐和邀请码接口使用login_token
+        final loginToken = await getLoginToken();
+        if (loginToken != null) {
+          finalHeaders['Authorization'] = loginToken;
+          finalHeaders['X-Token-Type'] = 'login_token';
+        }
+      } else {
+        // 其他接口默认使用auth_data token
+        final authData = await getToken();
+        if (authData != null) {
+          finalHeaders['Authorization'] = authData;
+        }
+      }
+
+      // 合并自定义请求头
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+      }
 
       final response = await http
           .post(
