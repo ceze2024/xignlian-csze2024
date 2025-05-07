@@ -20,14 +20,21 @@ class DomainService {
     'https://api.168cp.top'
   ];
 
+  static const Duration connectionTimeout = Duration(seconds: 15);
+  static const Duration totalTimeout = Duration(seconds: 30);
+
   static Future<String> fetchValidDomain() async {
     int retryCount = 0;
     const maxRetries = 3;
-    Duration retryDelay = const Duration(seconds: 2);
+    Duration retryDelay = const Duration(seconds: 3);
+    List<String> errors = [];
 
     while (retryCount < maxRetries) {
       try {
         // 尝试主域名
+        if (kDebugMode) {
+          print('正在尝试主域名...');
+        }
         final mainDomainResult = await _tryMainDomain();
         if (mainDomainResult != null) {
           baseUrl = mainDomainResult;
@@ -35,6 +42,9 @@ class DomainService {
         }
 
         // 尝试备用域名
+        if (kDebugMode) {
+          print('正在尝试备用域名...');
+        }
         final backupDomainResult = await _tryBackupDomains();
         if (backupDomainResult != null) {
           baseUrl = backupDomainResult;
@@ -43,12 +53,16 @@ class DomainService {
 
         retryCount++;
         if (retryCount < maxRetries) {
+          if (kDebugMode) {
+            print('尝试失败，等待 ${retryDelay.inSeconds} 秒后重试...');
+          }
           await Future.delayed(retryDelay);
           retryDelay *= 2; // 指数退避
         }
       } catch (e) {
+        errors.add(e.toString());
         if (kDebugMode) {
-          print('Attempt ${retryCount + 1} failed: $e');
+          print('尝试 ${retryCount + 1} 失败: $e');
         }
         retryCount++;
         if (retryCount < maxRetries) {
@@ -58,7 +72,8 @@ class DomainService {
       }
     }
 
-    throw Exception('无法访问任何可用域名，请检查网络连接或稍后重试');
+    final errorMessage = errors.isNotEmpty ? '错误详情: ${errors.join(", ")}' : '所有域名均无法访问';
+    throw Exception('无法访问任何可用域名，请检查网络连接或稍后重试。\n$errorMessage');
   }
 
   static Future<String?> _tryMainDomain() async {
@@ -66,24 +81,24 @@ class DomainService {
     try {
       final response = await client.get(
         Uri.parse('$initialDomain/api/v1/guest/comm/config'),
-        headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Connection': 'close'},
-      ).timeout(const Duration(seconds: 10));
+        headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Connection': 'keep-alive', 'Cache-Control': 'no-cache'},
+      ).timeout(connectionTimeout);
 
       if (response.statusCode == 200) {
         try {
           final dynamic data = json.decode(response.body);
-          if (data is Map<String, dynamic>) {
+          if (data is Map<String, dynamic> && data.containsKey('code')) {
             return initialDomain;
           }
         } catch (e) {
           if (kDebugMode) {
-            print('Main domain JSON parse error: $e');
+            print('主域名 JSON 解析错误: $e');
           }
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Main domain access error: $e');
+        print('主域名访问错误: $e');
       }
     } finally {
       client.close();
@@ -105,6 +120,10 @@ class DomainService {
             return domain;
           }
         }
+      } catch (e) {
+        if (kDebugMode) {
+          print('备用域名 $domain 访问错误: $e');
+        }
       } finally {
         client.close();
       }
@@ -116,8 +135,8 @@ class DomainService {
     try {
       final response = await client.get(
         Uri.parse(domain),
-        headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Connection': 'close'},
-      ).timeout(const Duration(seconds: 10));
+        headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Connection': 'keep-alive', 'Cache-Control': 'no-cache'},
+      ).timeout(connectionTimeout);
 
       if (response.statusCode == 200) {
         final List<dynamic> websites = json.decode(response.body) as List<dynamic>;
@@ -132,46 +151,39 @@ class DomainService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Config file access error for $domain: $e');
+        print('配置文件访问错误 $domain: $e');
       }
     }
     return null;
   }
 
   static Future<bool> _checkDomainAccessibility(String domain) async {
+    final client = http.Client();
     try {
-      final client = http.Client();
-      try {
-        final response = await client.get(
-          Uri.parse('$domain/api/v1/guest/comm/config'),
-          headers: {'User-Agent': 'Mozilla/5.0'},
-        ).timeout(const Duration(seconds: 10));
+      final response = await client.get(
+        Uri.parse('$domain/api/v1/guest/comm/config'),
+        headers: {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Connection': 'keep-alive', 'Cache-Control': 'no-cache'},
+      ).timeout(connectionTimeout);
 
-        if (response.statusCode == 200) {
-          try {
-            final dynamic data = json.decode(response.body);
-            return data is Map<String, dynamic>;
-          } catch (e) {
-            if (kDebugMode) {
-              print('JSON parse error for $domain: $e');
-            }
-            return false;
+      if (response.statusCode == 200) {
+        try {
+          final dynamic data = json.decode(response.body);
+          return data is Map<String, dynamic> && data.containsKey('code');
+        } catch (e) {
+          if (kDebugMode) {
+            print('域名 $domain JSON 解析错误: $e');
           }
+          return false;
         }
-        return false;
-      } catch (e) {
-        if (kDebugMode) {
-          print('Domain accessibility check failed for $domain: $e');
-        }
-        return false;
-      } finally {
-        client.close();
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Client creation error in accessibility check for $domain: $e');
       }
       return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('域名可访问性检查失败 $domain: $e');
+      }
+      return false;
+    } finally {
+      client.close();
     }
   }
 }
