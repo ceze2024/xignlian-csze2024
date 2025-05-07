@@ -15,13 +15,12 @@ class HttpService {
   final SilentLoginCallback? _silentLogin;
   bool _isRefreshingToken = false;
   static const int maxRetries = 3;
-  static const Duration requestTimeout = Duration(seconds: 20);
 
   HttpService._({SilentLoginCallback? silentLogin}) : _silentLogin = silentLogin;
 
   static HttpService get instance {
     if (_instance == null) {
-      throw Exception('HttpService 未初始化');
+      throw Exception('HttpServiceProvider not initialized');
     }
     return _instance!;
   }
@@ -34,53 +33,30 @@ class HttpService {
   static Future<void> initializeDomain() async {
     int retryCount = 0;
     Exception? lastError;
-    Duration retryDelay = const Duration(seconds: 3);
 
     while (retryCount < maxRetries) {
       try {
-        if (kDebugMode) {
-          print('正在初始化域名服务 (尝试 ${retryCount + 1}/$maxRetries)...');
-        }
-
         baseUrl = await DomainService.fetchValidDomain();
         if (baseUrl.isNotEmpty) {
           if (kDebugMode) {
-            print('域名初始化成功: $baseUrl');
+            print('Domain initialized successfully: $baseUrl');
           }
           return;
         }
       } catch (e) {
         lastError = e as Exception;
         if (kDebugMode) {
-          print('域名初始化失败 (尝试 ${retryCount + 1}): $e');
-        }
-
-        // 记录错误日志
-        final now = DateTime.now().toString().split('.').first;
-        final logLine = '[HttpService] $now: 域名初始化失败 (尝试 ${retryCount + 1}): $e\n';
-        try {
-          final dir = await getApplicationDocumentsDirectory();
-          final file = File('${dir.path}/app_http.log');
-          await file.writeAsString(logLine, mode: FileMode.append);
-        } catch (logError) {
-          if (kDebugMode) {
-            print('写入日志失败: $logError');
-          }
+          print('Domain initialization failed (attempt ${retryCount + 1}): $e');
         }
       }
 
       retryCount++;
       if (retryCount < maxRetries) {
-        if (kDebugMode) {
-          print('等待 ${retryDelay.inSeconds} 秒后重试...');
-        }
-        await Future.delayed(retryDelay);
-        retryDelay *= 2; // 指数退避
+        await Future.delayed(Duration(seconds: 2 * retryCount)); // 递增延迟
       }
     }
 
-    final errorMessage = lastError?.toString() ?? '未知错误';
-    throw Exception('域名初始化失败: $errorMessage');
+    throw lastError ?? Exception('Failed to initialize domain after $maxRetries attempts');
   }
 
   Future<void> _writeLog(String message) async {
@@ -88,11 +64,11 @@ class HttpService {
     final logLine = '[HttpService] $now: $message\n';
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/app_http.log');
+      final file = File('${dir.path}/app_login.log');
       await file.writeAsString(logLine, mode: FileMode.append);
     } catch (e) {
       if (kDebugMode) {
-        print('写入日志失败: $e');
+        print('Failed to write log: $e');
       }
     }
   }
@@ -102,17 +78,20 @@ class HttpService {
     try {
       final body = json.decode(response.body) as Map<String, dynamic>;
       final message = body['message']?.toString().toLowerCase() ?? '';
-      return message.contains('未登录') || message.contains('登陆已过期') || (message.contains('token') && message.contains('过期'));
+      return message.contains('未登录') || message.contains('登陆已过期') || message.contains('token') && message.contains('过期');
     } catch (_) {
       return false;
     }
   }
 
+  // 处理 token 过期的统一方法
   Future<Map<String, String>?> _handleTokenExpired() async {
-    await _writeLog('Token 已过期，尝试静默登录');
+    await _writeLog('Token expired, trying silent login');
 
+    // 防止多个请求同时刷新 token
     if (_isRefreshingToken) {
-      await _writeLog('Token 刷新正在进行中，等待...');
+      await _writeLog('Token refresh already in progress, waiting...');
+      // 等待现有的刷新完成
       while (_isRefreshingToken) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
@@ -128,7 +107,7 @@ class HttpService {
     _isRefreshingToken = true;
     try {
       if (_silentLogin == null) {
-        await _writeLog('未提供静默登录回调');
+        await _writeLog('No silent login callback provided');
         return null;
       }
 
@@ -136,41 +115,41 @@ class HttpService {
       if (refreshed) {
         final authData = await getToken();
         if (authData != null) {
-          await _writeLog('静默登录成功，获取新token');
+          await _writeLog('Silent login success, got new tokens');
           return {
             'Authorization': authData,
           };
         }
       }
-      await _writeLog('静默登录失败');
+      await _writeLog('Silent login failed');
       return null;
     } finally {
       _isRefreshingToken = false;
     }
   }
 
+  // 统一的 GET 请求方法
   Future<Map<String, dynamic>> getRequest(
     String endpoint, {
     Map<String, String>? headers,
   }) async {
-    if (baseUrl.isEmpty) {
-      throw Exception('域名未初始化，请先调用 initialize()');
-    }
-
     final url = Uri.parse('$baseUrl$endpoint');
-    await _writeLog('发送 GET 请求: $endpoint');
+    await _writeLog('GET request to: $endpoint');
 
     try {
-      Map<String, String> finalHeaders = {'Accept': 'application/json', 'Connection': 'keep-alive', 'Cache-Control': 'no-cache'};
+      Map<String, String> finalHeaders = {};
 
+      // 获取auth_data token
       final authData = await getToken();
       if (authData != null) {
         finalHeaders['Authorization'] = authData;
+        // 只在用户信息接口添加X-Token-Type头
         if (endpoint == '/api/v1/user/info') {
           finalHeaders['X-Token-Type'] = 'auth_data';
         }
       }
 
+      // 合并自定义请求头
       if (headers != null) {
         finalHeaders.addAll(headers);
       }
@@ -180,44 +159,41 @@ class HttpService {
             url,
             headers: finalHeaders,
           )
-          .timeout(requestTimeout);
+          .timeout(const Duration(seconds: 20));
 
       if (kDebugMode) {
-        print("GET $baseUrl$endpoint 响应: ${response.body}");
+        print("GET $baseUrl$endpoint response: ${response.body}");
       }
 
       if (response.statusCode == 200) {
-        await _writeLog('GET 请求成功');
-        try {
-          return json.decode(response.body) as Map<String, dynamic>;
-        } catch (e) {
-          throw Exception('响应数据解析失败: $e');
-        }
+        await _writeLog('GET request success');
+        return json.decode(response.body) as Map<String, dynamic>;
       }
 
+      // 处理 token 过期情况
       if (_isTokenExpiredResponse(response)) {
-        await _writeLog('检测到 Token 过期');
+        await _writeLog('Token expired detected in GET request');
         final newHeaders = await _handleTokenExpired();
         if (newHeaders != null) {
-          await _writeLog('使用新 Token 重试请求');
+          await _writeLog('Retrying GET request with new token');
           final retryResponse = await http.get(
             url,
             headers: {...newHeaders, ...?headers},
-          ).timeout(requestTimeout);
+          ).timeout(const Duration(seconds: 20));
 
           if (retryResponse.statusCode == 200) {
-            await _writeLog('GET 重试请求成功');
+            await _writeLog('GET retry request success');
             return json.decode(retryResponse.body) as Map<String, dynamic>;
           }
         }
       }
 
-      await _writeLog('GET 请求失败: ${response.statusCode}, ${response.body}');
-      throw Exception("请求失败: ${response.statusCode}, ${response.reasonPhrase}");
+      await _writeLog('GET request failed: ${response.statusCode}, ${response.body}');
+      throw Exception("GET request to $baseUrl$endpoint failed: ${response.statusCode}, ${response.body}");
     } catch (e) {
-      await _writeLog('GET 请求错误: $e');
+      await _writeLog('GET request error: $e');
       if (kDebugMode) {
-        print('请求 $baseUrl$endpoint 时发生错误: $e');
+        print('Error during GET request to $baseUrl$endpoint: $e');
       }
       rethrow;
     }
