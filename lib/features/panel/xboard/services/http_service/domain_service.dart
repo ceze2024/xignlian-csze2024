@@ -87,7 +87,7 @@ class DomainService {
       if (response.statusCode == 200) {
         try {
           final dynamic data = json.decode(response.body);
-          if (data is Map<String, dynamic>) {
+          if (data is Map<String, dynamic> && data.containsKey('code')) {
             return initialDomain;
           }
         } catch (e) {
@@ -168,7 +168,7 @@ class DomainService {
       if (response.statusCode == 200) {
         try {
           final dynamic data = json.decode(response.body);
-          return data is Map<String, dynamic>;
+          return data is Map<String, dynamic> && data.containsKey('code');
         } catch (e) {
           if (kDebugMode) {
             print('域名 $domain JSON 解析错误: $e');
