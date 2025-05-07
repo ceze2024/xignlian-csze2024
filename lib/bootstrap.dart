@@ -94,7 +94,6 @@ Future<void> lazyBootstrap(
     await _writeLog('Error during domain initialization: $e\nStackTrace: $stackTrace');
     container.read(authProvider.notifier).state = false;
     domainInitFailed = true;
-    // 允许应用继续启动，进入主界面
   }
 
   container.read(domainInitFailedProvider.notifier).state = domainInitFailed;
