@@ -14,14 +14,11 @@ class HttpService {
   static HttpService? _instance;
   final SilentLoginCallback? _silentLogin;
   bool _isRefreshingToken = false;
-  static const int maxRetries = 3;
 
   HttpService._({SilentLoginCallback? silentLogin}) : _silentLogin = silentLogin;
 
   static HttpService get instance {
-    if (_instance == null) {
-      throw Exception('HttpServiceProvider not initialized');
-    }
+    _instance ??= HttpService._();
     return _instance!;
   }
 
@@ -31,32 +28,7 @@ class HttpService {
   }
 
   static Future<void> initializeDomain() async {
-    int retryCount = 0;
-    Exception? lastError;
-
-    while (retryCount < maxRetries) {
-      try {
-        baseUrl = await DomainService.fetchValidDomain();
-        if (baseUrl.isNotEmpty) {
-          if (kDebugMode) {
-            print('Domain initialized successfully: $baseUrl');
-          }
-          return;
-        }
-      } catch (e) {
-        lastError = e as Exception;
-        if (kDebugMode) {
-          print('Domain initialization failed (attempt ${retryCount + 1}): $e');
-        }
-      }
-
-      retryCount++;
-      if (retryCount < maxRetries) {
-        await Future.delayed(Duration(seconds: 2 * retryCount)); // 递增延迟
-      }
-    }
-
-    throw lastError ?? Exception('Failed to initialize domain after $maxRetries attempts');
+    baseUrl = await DomainService.fetchValidDomain();
   }
 
   Future<void> _writeLog(String message) async {
@@ -66,11 +38,7 @@ class HttpService {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/app_login.log');
       await file.writeAsString(logLine, mode: FileMode.append);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Failed to write log: $e');
-      }
-    }
+    } catch (e) {}
   }
 
   bool _isTokenExpiredResponse(http.Response response) {
@@ -206,101 +174,79 @@ class HttpService {
     Map<String, String>? headers,
     bool requiresHeaders = true,
   }) async {
-    if (baseUrl.isEmpty) {
-      await initializeDomain();
-    }
-
     final url = Uri.parse('$baseUrl$endpoint');
     await _writeLog('POST request to: $endpoint');
 
-    int retryCount = 0;
-    Duration retryDelay = const Duration(seconds: 2);
-    Exception? lastError;
+    try {
+      Map<String, String> finalHeaders = {};
 
-    while (retryCount < maxRetries) {
-      try {
-        final client = http.Client();
-        try {
-          final Map<String, String> finalHeaders = {
-            if (requiresHeaders) 'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json',
-            'Connection': 'close',
-            ...?headers,
-          };
+      if (requiresHeaders) {
+        finalHeaders['Content-Type'] = 'application/json';
+      }
 
-          // 获取认证token
-          final authData = await getToken();
-          if (authData != null) {
-            finalHeaders['Authorization'] = authData;
-          }
-
-          final response = await client
-              .post(
-                url,
-                headers: finalHeaders,
-                body: json.encode(body),
-              )
-              .timeout(const Duration(seconds: 15));
-
-          if (response.statusCode == 200) {
-            await _writeLog('POST request success');
-            return json.decode(response.body) as Map<String, dynamic>;
-          }
-
-          // 处理token过期
-          if (_isTokenExpiredResponse(response)) {
-            await _writeLog('Token expired detected in POST request');
-            final newHeaders = await _handleTokenExpired();
-            if (newHeaders != null) {
-              final retryResponse = await client
-                  .post(
-                    url,
-                    headers: {...finalHeaders, ...newHeaders},
-                    body: json.encode(body),
-                  )
-                  .timeout(const Duration(seconds: 15));
-
-              if (retryResponse.statusCode == 200) {
-                await _writeLog('POST retry with new token success');
-                return json.decode(retryResponse.body) as Map<String, dynamic>;
-              }
-            }
-          }
-
-          // 处理其他错误
-          final errorMsg = _parseErrorMessage(response);
-          throw Exception(errorMsg);
-        } finally {
-          client.close();
-        }
-      } catch (e) {
-        lastError = e as Exception;
-        await _writeLog('POST request error (attempt ${retryCount + 1}): $e');
-
-        if (e.toString().contains('HandshakeException')) {
-          await initializeDomain();
-          baseUrl = DomainService.baseUrl;
-        }
-
-        retryCount++;
-        if (retryCount < maxRetries) {
-          await Future.delayed(retryDelay);
-          retryDelay *= 2; // 指数退避
-          continue;
+      // 获取auth_data token
+      final authData = await getToken();
+      if (authData != null) {
+        finalHeaders['Authorization'] = authData;
+        // 只在用户信息接口添加X-Token-Type头
+        if (endpoint == '/api/v1/user/info') {
+          finalHeaders['X-Token-Type'] = 'auth_data';
         }
       }
-    }
 
-    throw lastError ?? Exception('请求失败，请稍后重试');
-  }
+      // 合并自定义请求头
+      if (headers != null) {
+        finalHeaders.addAll(headers);
+      }
 
-  String _parseErrorMessage(http.Response response) {
-    try {
-      final body = json.decode(response.body) as Map<String, dynamic>;
-      return body['message']?.toString() ?? '未知错误';
+      final response = await http
+          .post(
+            url,
+            headers: requiresHeaders ? finalHeaders : null,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (kDebugMode) {
+        print("POST $baseUrl$endpoint response: ${response.body}");
+      }
+
+      if (response.statusCode == 200) {
+        await _writeLog('POST request success');
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+
+      // 处理 token 过期情况
+      if (_isTokenExpiredResponse(response)) {
+        await _writeLog('Token expired detected in POST request');
+        final newHeaders = await _handleTokenExpired();
+        if (newHeaders != null) {
+          await _writeLog('Retrying POST request with new token');
+          final retryHeaders = requiresHeaders ? {...newHeaders, 'Content-Type': 'application/json', ...?headers} : null;
+
+          final retryResponse = await http
+              .post(
+                url,
+                headers: retryHeaders,
+                body: json.encode(body),
+              )
+              .timeout(const Duration(seconds: 20));
+
+          if (retryResponse.statusCode == 200) {
+            await _writeLog('POST retry request success');
+            return json.decode(retryResponse.body) as Map<String, dynamic>;
+          }
+        }
+      }
+
+      await _writeLog('POST request failed: ${response.statusCode}, ${response.body}');
+      throw Exception("POST request to $baseUrl$endpoint failed: ${response.statusCode}, ${response.body}");
     } catch (e) {
-      return '服务器响应异常 (${response.statusCode})';
+      await _writeLog('POST request error: $e');
+      if (kDebugMode) {
+        print('Error during POST request to $baseUrl$endpoint: $e');
+      }
+      rethrow;
     }
   }
 }
