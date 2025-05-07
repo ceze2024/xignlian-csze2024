@@ -1,7 +1,10 @@
 // services/domain_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DomainService {
   static String baseUrl = '';
@@ -20,14 +23,43 @@ class DomainService {
     'https://api.168cp.top'
   ];
 
-  static const Duration connectionTimeout = Duration(seconds: 15);
+  static const Duration connectionTimeout = Duration(seconds: 5);
   static const Duration totalTimeout = Duration(seconds: 30);
+  static const String cacheKey = 'cached_domain';
+
+  // 读取本地缓存的上次可用域名（SharedPreferences）
+  static Future<String?> _readCachedDomain() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final domain = prefs.getString(cacheKey);
+      if (domain != null && domain.isNotEmpty) return domain;
+    } catch (_) {}
+    return null;
+  }
+
+  // 写入本地缓存（SharedPreferences）
+  static Future<void> _writeCachedDomain(String domain) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(cacheKey, domain);
+    } catch (_) {}
+  }
 
   static Future<String> fetchValidDomain() async {
     int retryCount = 0;
     const maxRetries = 3;
     Duration retryDelay = const Duration(seconds: 3);
     List<String> errors = [];
+
+    // 1. 优先检测本地缓存的上次可用域名
+    final cached = await _readCachedDomain();
+    if (cached != null) {
+      if (kDebugMode) print('优先检测本地缓存域名: $cached');
+      if (await _checkDomainAccessibility(cached)) {
+        baseUrl = cached;
+        return cached;
+      }
+    }
 
     while (retryCount < maxRetries) {
       try {
@@ -38,6 +70,7 @@ class DomainService {
         final mainDomainResult = await _tryMainDomain();
         if (mainDomainResult != null) {
           baseUrl = mainDomainResult;
+          await _writeCachedDomain(mainDomainResult);
           return mainDomainResult;
         }
 
@@ -48,6 +81,7 @@ class DomainService {
         final backupDomainResult = await _tryBackupDomains();
         if (backupDomainResult != null) {
           baseUrl = backupDomainResult;
+          await _writeCachedDomain(backupDomainResult);
           return backupDomainResult;
         }
 
