@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class DomainService {
-  static const String initialDomain = 'https://www.starlinkvpn.cc';
+  static const String initialDomain = 'https://starlink.168248.com';
   static const List<String> ossDomains = [
     'https://api.0101.pw',
     'https://api.starlinkvpn.cc',
