@@ -1,9 +1,10 @@
 // viewmodels/domain_check_viewmodel.dart
 import 'package:flutter/material.dart';
-import 'package:hiddify/features/panel/xboard/services/http_service/http_service.dart';
+import 'package:hiddify/features/panel/xboard/services/http_service/http_service_provider.dart';
 import 'dart:async';
 
 class DomainCheckViewModel extends ChangeNotifier {
+  final Future<void> Function() _initializeHttpService;
   bool _isChecking = true;
   bool _isSuccess = false;
   int _retryCount = 0;
@@ -15,7 +16,9 @@ class DomainCheckViewModel extends ChangeNotifier {
   int get retryCount => _retryCount;
   String get progressIndicator => '检查中${'.' * _dotsCount}';
 
-  DomainCheckViewModel() {
+  DomainCheckViewModel({
+    Future<void> Function()? initializeHttpService,
+  }) : _initializeHttpService = initializeHttpService ?? HttpServiceProvider.initialize {
     checkDomain();
   }
 
@@ -33,7 +36,7 @@ class DomainCheckViewModel extends ChangeNotifier {
     });
 
     try {
-      await HttpService.initialize();
+      await _initializeHttpService();
       _isSuccess = true;
       _timer?.cancel(); // 成功后停止定时器
     } catch (_) {
@@ -52,5 +55,11 @@ class DomainCheckViewModel extends ChangeNotifier {
   void retry() {
     _retryCount = 0; // 重置重试计数
     checkDomain();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 }
