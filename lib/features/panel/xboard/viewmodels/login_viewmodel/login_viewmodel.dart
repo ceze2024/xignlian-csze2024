@@ -1,5 +1,6 @@
 // viewmodels/login_viewmodel.dart
 import 'package:flutter/material.dart';
+import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/auth_provider.dart';
 import 'package:hiddify/features/panel/xboard/services/http_service/auth_service.dart';
 import 'package:hiddify/features/panel/xboard/services/subscription.dart';
@@ -103,6 +104,7 @@ class LoginViewModel extends ChangeNotifier {
         await Subscription.updateSubscription(context, ref);
 
         ref.read(authProvider.notifier).state = true;
+        ref.read(domainInitFailedProvider.notifier).state = false;
         await _writeLog('登录流程结束，已设置authProvider为true');
       } else {
         await _writeLog('登录失败，未获取到token或authData');

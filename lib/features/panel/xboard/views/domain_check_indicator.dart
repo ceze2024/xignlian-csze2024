@@ -1,11 +1,16 @@
 // views/domain_check_indicator.dart
 import 'package:flutter/material.dart';
+import 'package:hiddify/core/app_info/domain_init_failed_provider.dart';
 import 'package:hiddify/features/panel/xboard/viewmodels/domain_check_viewmodel.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hiddify/core/localization/translations.dart'; // 引入本地化提供者
 
 final domainCheckViewModelProvider = ChangeNotifierProvider((ref) {
-  return DomainCheckViewModel();
+  return DomainCheckViewModel(
+    onCheckSucceeded: () {
+      ref.read(domainInitFailedProvider.notifier).state = false;
+    },
+  );
 });
 
 class DomainCheckIndicator extends ConsumerWidget {

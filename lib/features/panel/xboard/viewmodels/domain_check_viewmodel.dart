@@ -5,6 +5,7 @@ import 'dart:async';
 
 class DomainCheckViewModel extends ChangeNotifier {
   final Future<void> Function() _initializeHttpService;
+  final VoidCallback? _onCheckSucceeded;
   bool _isChecking = true;
   bool _isSuccess = false;
   int _retryCount = 0;
@@ -18,7 +19,9 @@ class DomainCheckViewModel extends ChangeNotifier {
 
   DomainCheckViewModel({
     Future<void> Function()? initializeHttpService,
-  }) : _initializeHttpService = initializeHttpService ?? HttpServiceProvider.initialize {
+    VoidCallback? onCheckSucceeded,
+  })  : _initializeHttpService = initializeHttpService ?? HttpServiceProvider.initialize,
+        _onCheckSucceeded = onCheckSucceeded {
     checkDomain();
   }
 
@@ -38,6 +41,7 @@ class DomainCheckViewModel extends ChangeNotifier {
     try {
       await _initializeHttpService();
       _isSuccess = true;
+      _onCheckSucceeded?.call();
       _timer?.cancel(); // 成功后停止定时器
     } catch (_) {
       _isSuccess = false;
