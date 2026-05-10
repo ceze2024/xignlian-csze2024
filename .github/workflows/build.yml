@@ -125,7 +125,7 @@ jobs:
 
   build_windows:
     permissions: write-all
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -169,7 +169,7 @@ jobs:
 
   build_macos:
     permissions: write-all
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -210,7 +210,7 @@ jobs:
 
   build_ios:
     permissions: write-all
-    runs-on: macos-12
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v3
