@@ -49,9 +49,9 @@ Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ign
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\星链"; Filename: "{app}\Hiddify.exe"
-Name: "{autodesktop}\星链"; Filename: "{app}\Hiddify.exe"; Tasks: desktopicon
-Name: "{userstartup}\星链"; Filename: "{app}\Hiddify.exe"; WorkingDir: "{app}"; Tasks: launchAtStartup
+Name: "{autoprograms}\星链"; Filename: "{app}\Hiddify.exe"; WorkingDir: "{app}"; IconFilename: "{app}\Hiddify.exe"; IconIndex: 0
+Name: "{autodesktop}\星链"; Filename: "{app}\Hiddify.exe"; WorkingDir: "{app}"; IconFilename: "{app}\Hiddify.exe"; IconIndex: 0; Tasks: desktopicon
+Name: "{userstartup}\星链"; Filename: "{app}\Hiddify.exe"; WorkingDir: "{app}"; IconFilename: "{app}\Hiddify.exe"; IconIndex: 0; Tasks: launchAtStartup
 
 [Run]
 Filename: "{app}\Hiddify.exe"; Description: "{cm:LaunchProgram,星链}"; Flags: runascurrentuser nowait postinstall skipifsilent
