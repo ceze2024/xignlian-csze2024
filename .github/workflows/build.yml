@@ -230,12 +230,6 @@ jobs:
         run: |
           flutter pub get
   
-      - name: Reinstall iOS Dependencies
-        run: |
-          cd ios
-          rm -rf Pods Podfile.lock
-          pod install
-          
       - name: Install tree
         run: brew install tree
 
