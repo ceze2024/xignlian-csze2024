@@ -22,13 +22,17 @@ class LoggerController extends LoggyPrinter with InfraLogger {
   }
 
   static void init(String appLogPath, {bool debugMode = false}) {
+    final filePrinter = FileLogPrinter(
+      appLogPath,
+      minLevel: debugMode ? LogLevel.debug : LogLevel.warning,
+    );
     _instance = LoggerController(
       const ConsolePrinter(),
-      {},
+      {"file": filePrinter},
     );
     Loggy.initLoggy(
       logPrinter: _instance,
-      logOptions: LogOptions(debugMode ? LogLevel.all : LogLevel.off),
+      logOptions: LogOptions(debugMode ? LogLevel.all : LogLevel.warning),
     );
   }
 
