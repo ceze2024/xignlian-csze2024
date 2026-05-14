@@ -70,8 +70,6 @@ class FileLogPrinter extends LoggyPrinter {
 
   @override
   void onLog(LogRecord record) {
-    if (record.level.index < minLevel.index) return;
-
     final time = record.time.toIso8601String().split('T')[1];
     _sink.writeln("$time - $record");
     if (record.error != null) {
