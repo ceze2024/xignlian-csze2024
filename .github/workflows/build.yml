@@ -240,12 +240,14 @@ jobs:
   
       - name: Build iOS (No Code Sign)
         run: |
-          flutter build ipa --no-codesign
+          flutter build ios --release --no-codesign
   
       - name: Copy to out iOS
         run: |
           mkdir out
-          mv build/ios/ipa/*.ipa out/${TARGET_NAME_ipa}.ipa
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/Runner.app
+          zip -r out/${TARGET_NAME_ipa}.ipa Payload
   
       - name: Upload iOS Artifact
         if: env.UPLOAD_ARTIFACT == 'true'
